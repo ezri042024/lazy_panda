@@ -5,6 +5,7 @@ from django.db.models import Sum
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils import timezone
 
+from finance.defaults import create_default_finance_setup
 from finance.models import Account, Transaction, Bill, Debt, SavingsGoal, Budget, Category, RecurringBill, Transfer, \
     DebtPayment, GoalContribution
 from finance.services import decrease_account_balance, increase_account_balance, generate_recurring_bills_for_user, \
@@ -44,7 +45,7 @@ def web_register_view(request):
         user = form.save(commit=False)
         user.set_password(form.cleaned_data["password"])
         user.save()
-
+        create_default_finance_setup(user)
         login(request, user)
         messages.success(request, "Account created successfully.")
         return redirect("finance_web_dashboard")
