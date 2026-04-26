@@ -1,0 +1,498 @@
+{% extends "finance_web/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-filter-form {
+        width: auto;
+    }
+
+    .dashboard-filter-form .form-select,
+    .dashboard-filter-form .form-control {
+        min-height: 48px;
+    }
+
+    .dashboard-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+
+    .dashboard-action-row .btn {
+        white-space: nowrap;
+    }
+
+    .dashboard-money {
+        word-break: break-word;
+        line-height: 1.05;
+    }
+
+    .dashboard-list-item {
+        min-width: 0;
+    }
+
+    .dashboard-list-amount {
+        flex: 0 0 auto;
+        max-width: 120px;
+    }
+
+    .dashboard-progress {
+        height: 10px;
+        background: #eeeeee;
+    }
+
+    @media (max-width: 767px) {
+        .dashboard-header {
+            align-items: stretch !important;
+        }
+
+        .dashboard-filter-form {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 110px;
+            gap: .5rem !important;
+        }
+
+        .dashboard-filter-form button {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .dashboard-hero-grid {
+            gap: 1rem !important;
+        }
+
+        .hero-card {
+            padding: 22px !important;
+            border-radius: 28px !important;
+        }
+
+        .dashboard-money {
+            font-size: 2rem !important;
+        }
+
+        .mini-card {
+            padding: 16px !important;
+        }
+
+        .mini-card .fs-5,
+        .mini-card .fs-4 {
+            font-size: 1rem !important;
+        }
+
+        .dashboard-quick-actions {
+            align-items: stretch !important;
+        }
+
+        .dashboard-action-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-action-row .btn {
+            width: 100%;
+            justify-content: center;
+            padding-top: 13px;
+            padding-bottom: 13px;
+        }
+
+        .dashboard-card-title-row {
+            align-items: flex-start !important;
+        }
+
+        .dashboard-list-row {
+            align-items: flex-start !important;
+        }
+
+        .dashboard-list-row .mini-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+        }
+
+        .dashboard-list-amount {
+            max-width: 100px;
+            font-size: .9rem;
+            text-align: right;
+        }
+
+        .dashboard-bill-row {
+            align-items: flex-start !important;
+        }
+
+        .dashboard-bill-row .fw-bold:last-child {
+            max-width: 100px;
+            text-align: right;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .dashboard-filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-money {
+            font-size: 1.75rem !important;
+        }
+
+        .mini-icon {
+            width: 40px !important;
+            height: 40px !important;
+            border-radius: 14px !important;
+        }
+
+        .app-card {
+            padding: 1rem !important;
+        }
+
+        .dashboard-list-row {
+            gap: .65rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Dashboard</h1>
+        <p class="text-muted fw-semibold mb-0">Your financial snapshot for {{ month }}/{{ year }}</p>
+    </div>
+
+    <form method="get" class=" d-flex flex-wrap gap-2 align-items-center hidden" >
+        <select name="month" class="form-select" style="width: 140px;">
+            <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+            <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+            <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+            <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+            <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+            <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+            <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+            <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+            <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+            <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+        </select>
+
+        <input type="number" name="year" value="{{ year }}" class="form-control" style="width: 115px;">
+
+        <button class="btn btn-accent">
+            <i class="bi bi-funnel me-1"></i> Filter
+        </button>
+    </form>
+</div>
+
+<div class="dashboard-hero-grid row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="hero-card h-100">
+            <div class="d-flex justify-content-between align-items-start gap-3 position-relative" style="z-index:1;">
+                <div>
+                    <div class="text-white-50 fw-bold mb-2">Net Worth</div>
+                    <div class="dashboard-money display-5 fw-bold text-money mb-2">
+                        ₱{{ net_worth|floatformat:2|intcomma }}
+                    </div>
+                    <div class="text-white-50 fw-semibold">
+                        Assets minus liabilities
+                    </div>
+                </div>
+
+                <div class="brand-icon d-md-grid" style="background:rgba(255,255,255,.08); color:#4F8B5B;">
+                    <img src="{% static 'finance_web/img/lazy_logo.png' %}" alt="Budget App Logo" class="sidebar-logo">
+                </div>
+            </div>
+
+            <div class="row g-3 mt-4 position-relative" style="z-index:1;">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-wallet2" style="color:#4F8B5B;"></i>
+                            <div class="text-white-50 fw-semibold small">Assets</div>
+                        </div>
+                        <div class="fw-bold fs-5">₱{{ total_assets|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-credit-card" style="color:#ff6b6b;"></i>
+                            <div class="text-white-50 fw-semibold small">Liabilities</div>
+                        </div>
+                        <div class="fw-bold fs-5">₱{{ total_liabilities|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="row g-3 h-100">
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                        <i class="bi bi-arrow-down"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Income</div>
+                    <div class="fw-bold fs-5">₱{{ total_income|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#FFF1E8;color:#4F8B5B;">
+                        <i class="bi bi-arrow-up"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Expense</div>
+                    <div class="fw-bold fs-5">₱{{ total_expense|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#EFF6FF;color:#2563EB;">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Cashflow</div>
+                    <div class="fw-bold fs-5">₱{{ net_cashflow|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#FFF7ED;color:#EA580C;">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Unpaid Bills</div>
+                    <div class="fw-bold fs-5">₱{{ unpaid_bills_total|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-3 p-md-4 mb-4">
+    <div class="dashboard-quick-actions d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Quick Actions</h5>
+            <p class="text-muted fw-semibold small mb-0">Common money tasks</p>
+        </div>
+
+        <div class="dashboard-action-row">
+            <a href="{% url 'finance_web_transaction_create' %}" class="btn btn-accent">
+                <i class="bi bi-plus-lg me-1"></i> Transaction
+            </a>
+
+            <a href="{% url 'finance_web_transactions' %}" class="btn btn-light fw-bold rounded-4">
+                <i class="bi bi-receipt me-1"></i> View Transactions
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <div class="app-card p-4 mb-4">
+            <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Recent Transactions</h5>
+                    <p class="text-muted fw-semibold small mb-0">Latest activity for selected month</p>
+                </div>
+
+                <a href="{% url 'finance_web_transactions' %}" class="text-decoration-none fw-bold" style="color:#4F8B5B;">
+                    View all
+                </a>
+            </div>
+
+            {% if recent_transactions %}
+                <div class="vstack gap-3">
+                    {% for item in recent_transactions %}
+                        <div class="dashboard-list-row d-flex align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                            {% if item.transaction_type == "income" %}
+                                <div class="mini-icon mb-0" style="background:#EAFBF0;color:#16A34A;">
+                                    <i class="bi bi-arrow-down"></i>
+                                </div>
+                            {% else %}
+                                <div class="mini-icon mb-0" style="background:rgba(79,139,91,.12);color:#4F8B5B;">
+                                    <i class="bi bi-arrow-up"></i>
+                                </div>
+                            {% endif %}
+
+                            <div class="dashboard-list-item flex-grow-1 min-w-0">
+                                <div class="fw-bold text-truncate">{{ item.title }}</div>
+                                <div class="text-muted small fw-semibold text-truncate">
+                                    {{ item.category.name|default:"-" }} • {{ item.account.name }} • {{ item.transaction_date }}
+                                </div>
+                            </div>
+
+                            <div class="dashboard-list-amount fw-bold text-end">
+                                {% if item.transaction_type == "income" %}
+                                    <span style="color:#16A34A;">+₱{{ item.amount|floatformat:2|intcomma }}</span>
+                                {% else %}
+                                    <span style="color:#4F8B5B;">-₱{{ item.amount|floatformat:2|intcomma }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <h5 class="fw-bold">No recent transactions</h5>
+                    <p class="text-muted fw-semibold mb-0">Add income, expense, or pay a bill to see activity here.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="app-card p-4">
+            <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Spending by Category</h5>
+                    <p class="text-muted fw-semibold small mb-0">Top expense categories this period</p>
+                </div>
+            </div>
+
+            {% if expense_by_category %}
+                {% for item in expense_by_category %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between fw-bold mb-2 gap-3">
+                            <span class="text-truncate">{{ item.category__name }}</span>
+                            <span class="text-nowrap">₱{{ item.total|floatformat:2|intcomma }}</span>
+                        </div>
+
+                        <div class="progress rounded-pill dashboard-progress">
+                            <div class="progress-bar"
+                                 style="width: {% widthratio item.total total_expense 100 %}%; background:#4F8B5B;">
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <h5 class="fw-bold">No expenses this period</h5>
+                    <p class="text-muted fw-semibold mb-0">Expenses will be grouped by category here.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="app-card p-4 mb-4">
+            <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Budget Summary</h5>
+                    <p class="text-muted fw-semibold small mb-0">Actual spending vs monthly budget</p>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                        <div class="text-muted small fw-bold">Spent</div>
+                        <div class="fw-bold">₱{{ total_budget_spent|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                        <div class="text-muted small fw-bold">Remaining</div>
+                        <div class="fw-bold">₱{{ total_budget_remaining|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2 gap-3">
+                <div class="text-muted fw-semibold small text-truncate">
+                    ₱{{ total_budget_spent|floatformat:2|intcomma }} of ₱{{ total_budget_limit|floatformat:2|intcomma }}
+                </div>
+
+                {% if total_budget_limit %}
+                    <div class="fw-bold small text-nowrap" style="color:#4F8B5B;">
+                        {% widthratio total_budget_spent total_budget_limit 100 %}% used
+                    </div>
+                {% else %}
+                    <div class="fw-bold small text-muted text-nowrap">0% used</div>
+                {% endif %}
+            </div>
+
+            <div class="progress rounded-pill dashboard-progress">
+                {% if total_budget_limit %}
+                    <div class="progress-bar"
+                         style="width: {% widthratio total_budget_spent total_budget_limit 100 %}%; background:#4F8B5B;">
+                    </div>
+                {% else %}
+                    <div class="progress-bar" style="width: 0%; background:#4F8B5B;"></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="app-card p-4">
+            <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Bills to Watch</h5>
+                    <p class="text-muted fw-semibold small mb-0">Overdue and upcoming bills</p>
+                </div>
+
+                <a href="#" class="text-decoration-none fw-bold text-nowrap" style="color:#4F8B5B;">
+                    View bills
+                </a>
+            </div>
+
+            {% if overdue_bills or due_soon_bills %}
+                <div class="vstack gap-3">
+                    {% for bill in overdue_bills %}
+                        <div class="dashboard-bill-row d-flex align-items-center gap-3 p-3 rounded-4" style="background:#FFF1F1;">
+                            <div class="mini-icon mb-0" style="background:rgba(255,99,99,.12);color:#ff5b5b;">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold text-truncate">{{ bill.name }}</div>
+                                <div class="small fw-bold text-danger">Overdue • {{ bill.due_date }}</div>
+                            </div>
+
+                            <div class="fw-bold text-nowrap">
+                                ₱{{ bill.amount_due|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for bill in due_soon_bills %}
+                        <div class="dashboard-bill-row d-flex align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                            <div class="mini-icon mb-0" style="background:rgba(79,139,91,.12);color:#4F8B5B;">
+                                <i class="bi bi-receipt"></i>
+                            </div>
+
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold text-truncate">{{ bill.name }}</div>
+                                <div class="small fw-bold" style="color:#4F8B5B;">Due soon • {{ bill.due_date }}</div>
+                            </div>
+
+                            <div class="fw-bold text-nowrap">
+                                ₱{{ bill.amount_due|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h5 class="fw-bold">No bills to watch</h5>
+                    <p class="text-muted fw-semibold mb-0">No overdue or due-soon bills right now.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,385 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Reports | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-progress {
+        height: 10px;
+        background: #eeeeee;
+    }
+
+    @media (max-width: 767px) {
+        .reports-filter-form {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 110px;
+            gap: .5rem !important;
+        }
+
+        .reports-filter-form button {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .report-row {
+            align-items: flex-start !important;
+        }
+
+        .report-amount {
+            width: 100%;
+            text-align: left !important;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .reports-filter-form {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Reports</h1>
+        <p class="text-muted fw-semibold mb-0">Analyze income, expenses, budgets, bills, debts, and goals</p>
+    </div>
+
+    <form method="get" class="reports-filter-form d-flex flex-wrap gap-2 align-items-center">
+        <select name="month" class="form-select" style="width: 140px;">
+            <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+            <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+            <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+            <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+            <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+            <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+            <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+            <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+            <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+            <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+        </select>
+
+        <input type="number" name="year" value="{{ year }}" class="form-control" style="width: 115px;">
+
+        <button class="btn btn-accent">
+            <i class="bi bi-funnel me-1"></i> Filter
+        </button>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="hero-card h-100">
+            <div class="text-white-50 fw-bold mb-2">Net Cashflow</div>
+            <div class="display-5 fw-bold text-money mb-2">
+                ₱{{ net_cashflow|floatformat:2|intcomma }}
+            </div>
+            <div class="text-white-50 fw-semibold">
+                Income minus expenses for {{ month }}/{{ year }}
+            </div>
+
+            <div class="row g-3 mt-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="text-white-50 fw-semibold small">Income</div>
+                        <div class="fw-bold fs-5">₱{{ total_income|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="text-white-50 fw-semibold small">Expenses</div>
+                        <div class="fw-bold fs-5">₱{{ total_expense|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="row g-3 h-100">
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Assets</div>
+                    <div class="fw-bold fs-5">₱{{ total_assets|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#FFF1F1;color:#ff5b5b;">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Liabilities</div>
+                    <div class="fw-bold fs-5">₱{{ total_liabilities|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#EFF6FF;color:#2563EB;">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Net Worth</div>
+                    <div class="fw-bold fs-4">₱{{ net_worth|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-6">
+        <div class="app-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Expenses by Category</h5>
+                    <p class="text-muted fw-semibold small mb-0">Where your money went</p>
+                </div>
+            </div>
+
+            {% if expense_by_category %}
+                <div class="vstack gap-3">
+                    {% for item in expense_by_category %}
+                        <div>
+                            <div class="d-flex justify-content-between fw-bold mb-2 gap-3">
+                                <span class="text-truncate">{{ item.category__name }}</span>
+                                <span class="text-nowrap">₱{{ item.total|floatformat:2|intcomma }}</span>
+                            </div>
+
+                            <div class="progress rounded-pill report-progress">
+                                <div class="progress-bar"
+                                     style="width: {% widthratio item.total total_expense 100 %}%; background:#4F8B5B;">
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <h5 class="fw-bold">No expense data</h5>
+                    <p class="text-muted fw-semibold mb-0">Expenses will appear here by category.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="app-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Income by Category</h5>
+                    <p class="text-muted fw-semibold small mb-0">Sources of income</p>
+                </div>
+            </div>
+
+            {% if income_by_category %}
+                <div class="vstack gap-3">
+                    {% for item in income_by_category %}
+                        <div>
+                            <div class="d-flex justify-content-between fw-bold mb-2 gap-3">
+                                <span class="text-truncate">{{ item.category__name }}</span>
+                                <span class="text-nowrap">₱{{ item.total|floatformat:2|intcomma }}</span>
+                            </div>
+
+                            <div class="progress rounded-pill report-progress">
+                                <div class="progress-bar"
+                                     style="width: {% widthratio item.total total_income 100 %}%; background:#16A34A;">
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <h5 class="fw-bold">No income data</h5>
+                    <p class="text-muted fw-semibold mb-0">Income will appear here by category.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-5">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-1">Budget vs Actual</h5>
+            <p class="text-muted fw-semibold small mb-3">Monthly budget usage</p>
+
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                        <div class="text-muted small fw-bold">Budget</div>
+                        <div class="fw-bold">₱{{ total_budget_limit|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                        <div class="text-muted small fw-bold">Spent</div>
+                        <div class="fw-bold">₱{{ total_budget_spent|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted fw-semibold small">
+                    Remaining ₱{{ total_budget_remaining|floatformat:2|intcomma }}
+                </span>
+                <span class="fw-bold small" style="color:#4F8B5B;">
+                    {{ budget_usage_percent }}% used
+                </span>
+            </div>
+
+            <div class="progress rounded-pill report-progress">
+                <div class="progress-bar"
+                     style="width: {{ budget_usage_percent }}%; background:#4F8B5B;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="app-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Budget Categories</h5>
+                    <p class="text-muted fw-semibold small mb-0">Category-level budget progress</p>
+                </div>
+            </div>
+
+            {% if budget_rows %}
+                <div class="vstack gap-3">
+                    {% for row in budget_rows %}
+                        <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                            <div class="d-flex justify-content-between fw-bold mb-1 gap-3">
+                                <span class="text-truncate">{{ row.category_name }}</span>
+                                <span class="{% if row.is_over %}text-danger{% endif %} text-nowrap">
+                                    {{ row.progress_percent }}%
+                                </span>
+                            </div>
+
+                            <div class="text-muted small fw-semibold mb-2">
+                                ₱{{ row.spent|floatformat:2|intcomma }}
+                                of ₱{{ row.amount_limit|floatformat:2|intcomma }}
+                                {% if row.is_over %} • Over budget{% endif %}
+                            </div>
+
+                            <div class="progress rounded-pill report-progress">
+                                <div class="progress-bar"
+                                     style="width: {{ row.progress_percent }}%; background:{% if row.is_over %}#ff5b5b{% else %}#4F8B5B{% endif %};">
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <h5 class="fw-bold">No budgets yet</h5>
+                    <p class="text-muted fw-semibold mb-0">Create budgets to compare planned vs actual spending.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-3">Bills Summary</h5>
+
+            <div class="vstack gap-3">
+                <div class="d-flex justify-content-between p-3 rounded-4" style="background:#F8F7F4;">
+                    <span class="fw-bold">Total Due</span>
+                    <span class="fw-bold">₱{{ total_bills_due|floatformat:2|intcomma }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between p-3 rounded-4" style="background:#F8F7F4;">
+                    <span class="fw-bold">Paid</span>
+                    <span class="fw-bold text-success">₱{{ total_bills_paid|floatformat:2|intcomma }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between p-3 rounded-4" style="background:#F8F7F4;">
+                    <span class="fw-bold">Unpaid</span>
+                    <span class="fw-bold">₱{{ unpaid_bills_total|floatformat:2|intcomma }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between p-3 rounded-4" style="background:#F8F7F4;">
+                    <span class="fw-bold">Paid Bills</span>
+                    <span class="fw-bold">{{ paid_bills_count }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between p-3 rounded-4" style="background:#F8F7F4;">
+                    <span class="fw-bold">Unpaid Bills</span>
+                    <span class="fw-bold">{{ unpaid_bills_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-3">Debt Summary</h5>
+
+            <div class="mini-icon" style="background:#FFF1F1;color:#ff5b5b;">
+                <i class="bi bi-credit-card-2-front"></i>
+            </div>
+
+            <div class="text-muted fw-bold small">Outstanding Debt</div>
+            <div class="fw-bold fs-3 mb-2">
+                ₱{{ total_debt_balance|floatformat:2|intcomma }}
+            </div>
+
+            <p class="text-muted fw-semibold mb-0">
+                Includes active debt records. Credit card and loan accounts are included in total liabilities.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-3">Goal Summary</h5>
+
+            <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                <i class="bi bi-flag"></i>
+            </div>
+
+            <div class="text-muted fw-bold small">Saved</div>
+            <div class="fw-bold fs-3 mb-2">
+                ₱{{ total_goal_saved|floatformat:2|intcomma }}
+            </div>
+
+            <div class="text-muted fw-semibold small mb-2">
+                of ₱{{ total_goal_target|floatformat:2|intcomma }}
+            </div>
+
+            <div class="progress rounded-pill report-progress">
+                <div class="progress-bar"
+                     style="width: {{ goal_progress_percent }}%; background:#16A34A;">
+                </div>
+            </div>
+
+            <div class="small fw-bold text-muted mt-2">
+                {{ goal_progress_percent }}% complete
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

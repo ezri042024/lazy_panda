@@ -1,0 +1,96 @@
+{% extends "finance_web/base.html" %}
+
+{% block title %}
+    {% if mode == "edit" %}Edit Goal Contribution{% else %}Add Goal Contribution{% endif %} | Lazy Panda Finance
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">
+            {% if mode == "edit" %}Edit Goal Contribution{% else %}Add Goal Contribution{% endif %}
+        </h1>
+        <p class="text-muted fw-semibold mb-0">Move money into a savings goal</p>
+    </div>
+
+    <a href="{% url 'finance_web_goals' %}" class="btn btn-light fw-bold rounded-4">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="hero-card mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon" style="background:rgba(255,255,255,.08);">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <div>
+                    <div class="text-white-50 fw-bold">
+                        {% if mode == "edit" %}Update contribution{% else %}Create contribution{% endif %}
+                    </div>
+                    <h3 class="fw-bold mb-0">Contribution Details</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card p-4 p-md-5">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Goal</label>
+                        {{ form.goal }}
+                        {{ form.goal.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">From Account</label>
+                        {{ form.account }}
+                        {{ form.account.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Amount</label>
+                        {{ form.amount }}
+                        {{ form.amount.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Contribution Date</label>
+                        {{ form.contribution_date }}
+                        {{ form.contribution_date.errors }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Notes</label>
+                        {{ form.notes }}
+                        {{ form.notes.errors }}
+                    </div>
+                </div>
+
+                <div class="alert alert-info rounded-4 mt-4 mb-0">
+                    <strong>How this works:</strong> The selected account balance decreases, and the goal saved amount increases.
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'finance_web_goals' %}" class="btn btn-light fw-bold rounded-4">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="btn btn-accent">
+                        {% if mode == "edit" %}Update Contribution{% else %}Save Contribution{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

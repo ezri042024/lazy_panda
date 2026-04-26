@@ -1,0 +1,193 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Bills | Lazy Panda Finance{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Bills</h1>
+        <p class="text-muted fw-semibold mb-0">Track due dates, unpaid bills, and paid bills</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'finance_web_bill_create' %}" class="btn btn-accent">
+            <i class="bi bi-plus-lg me-1"></i> Add Bill
+        </a>
+        <a href="{% url 'finance_web_recurring_bills' %}" class="btn btn-light fw-bold rounded-4">
+            <i class="bi bi-repeat me-1"></i> Recurring Bills
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#FFF7ED;color:#EA580C;">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div class="text-muted fw-bold small">Total Due</div>
+            <div class="fw-bold fs-5">₱{{ total_due|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+            <div class="text-muted fw-bold small">Paid</div>
+            <div class="fw-bold fs-5">₱{{ total_paid|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#FFF1E8;color:#4F8B5B;">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div class="text-muted fw-bold small">Unpaid</div>
+            <div class="fw-bold fs-5">₱{{ total_unpaid|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#FFF1F1;color:#ff5b5b;">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="text-muted fw-bold small">Overdue</div>
+            <div class="fw-bold fs-5">{{ overdue_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Month</label>
+            <select name="month" class="form-select">
+                <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Year</label>
+            <input type="number" name="year" value="{{ year }}" class="form-control">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Status</label>
+            <select name="status" class="form-select">
+                <option value="all" {% if status_filter == "all" %}selected{% endif %}>All</option>
+                <option value="unpaid" {% if status_filter == "unpaid" %}selected{% endif %}>Unpaid</option>
+                <option value="partial" {% if status_filter == "partial" %}selected{% endif %}>Partial</option>
+                <option value="paid" {% if status_filter == "paid" %}selected{% endif %}>Paid</option>
+                <option value="overdue" {% if status_filter == "overdue" %}selected{% endif %}>Overdue</option>
+                <option value="cancelled" {% if status_filter == "cancelled" %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <button class="btn btn-accent w-100">
+                <i class="bi bi-funnel me-1"></i> Apply
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="app-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Bill List</h5>
+        <span class="badge rounded-pill text-bg-light">{{ bills|length }} bill(s)</span>
+    </div>
+
+    {% if bills %}
+        <div class="vstack gap-3">
+            {% for bill in bills %}
+                <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                    <div class="mini-icon mb-0
+                        {% if bill.status == 'paid' %}" style="background:#EAFBF0;color:#16A34A;"
+                        {% elif bill.status == 'overdue' %}" style="background:#FFF1F1;color:#ff5b5b;"
+                        {% else %}" style="background:rgba(79,139,91,.12);color:#4F8B5B;"
+                        {% endif %}>
+                        {% if bill.status == "paid" %}
+                            <i class="bi bi-check2-circle"></i>
+                        {% elif bill.status == "overdue" %}
+                            <i class="bi bi-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="bi bi-receipt"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold text-truncate">{{ bill.name }}</div>
+                        <div class="text-muted small fw-semibold text-truncate">
+                            {{ bill.category.name|default:"No category" }} • {{ bill.account.name|default:"No account" }} • Due {{ bill.due_date }}
+                        </div>
+                        {% if bill.payment_transaction %}
+                            <div class="small fw-bold" style="color:#16A34A;">
+                                Transaction recorded
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end">
+                        <div class="fw-bold">₱{{ bill.amount_due|floatformat:2|intcomma }}</div>
+                        <span class="badge rounded-pill
+                            {% if bill.status == 'paid' %}text-bg-success
+                            {% elif bill.status == 'overdue' %}text-bg-danger
+                            {% elif bill.status == 'partial' %}text-bg-warning
+                            {% else %}text-bg-light{% endif %}">
+                            {{ bill.status|title }}
+                        </span>
+                    </div>
+
+                    <div class="d-flex gap-2 ms-auto">
+                        {% if bill.status != "paid" %}
+                            <form method="post" action="{% url 'finance_web_bill_mark_paid' bill.id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-accent">
+                                    Mark Paid
+                                </button>
+                            </form>
+                        {% else %}
+                            {% if bill.payment_transaction %}
+                                <form method="post" action="{% url 'finance_web_bill_unmark_paid' bill.id %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-light fw-bold rounded-4 text-danger">
+                                        Unmark Paid
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+
+                        <a href="{% url 'finance_web_bill_edit' bill.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                            Edit
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <h5 class="fw-bold">No bills found</h5>
+            <p class="text-muted fw-semibold mb-0">Try changing filters or add your first bill.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

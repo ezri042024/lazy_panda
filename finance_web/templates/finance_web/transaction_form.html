@@ -1,0 +1,111 @@
+{% extends "finance_web/base.html" %}
+
+{% block title %}
+    {% if mode == "edit" %}Edit Transaction{% else %}Add Transaction{% endif %} | Lazy Panda Finance
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">
+            {% if mode == "edit" %}Edit Transaction{% else %}Add Transaction{% endif %}
+        </h1>
+        <p class="text-muted fw-semibold mb-0">
+            Income, expense, or adjustment entry
+        </p>
+    </div>
+
+    <a href="{% url 'finance_web_transactions' %}" class="btn btn-light fw-bold rounded-4">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="hero-card mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon" style="background:rgba(255,255,255,.08);">
+                    <i class="bi bi-receipt-cutoff"></i>
+                </div>
+                <div>
+                    <div class="text-white-50 fw-bold">
+                        {% if mode == "edit" %}Update money movement{% else %}Record money movement{% endif %}
+                    </div>
+                    <h3 class="fw-bold mb-0">Transaction Details</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card p-4 p-md-5">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Type</label>
+                        {{ form.transaction_type }}
+                        {{ form.transaction_type.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Date</label>
+                        {{ form.transaction_date }}
+                        {{ form.transaction_date.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Account</label>
+                        {{ form.account }}
+                        {{ form.account.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Category</label>
+                        {{ form.category }}
+                        {{ form.category.errors }}
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">Title</label>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Amount</label>
+                        {{ form.amount }}
+                        {{ form.amount.errors }}
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Reference No.</label>
+                        {{ form.reference_no }}
+                        {{ form.reference_no.errors }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Notes</label>
+                        {{ form.notes }}
+                        {{ form.notes.errors }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'finance_web_transactions' %}" class="btn btn-light fw-bold rounded-4">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-accent">
+                        {% if mode == "edit" %}Update Transaction{% else %}Save Transaction{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

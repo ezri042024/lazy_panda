@@ -1,0 +1,142 @@
+{% extends "finance_web/base.html" %}
+
+{% block title %}
+    {% if mode == "edit" %}Edit Recurring Bill{% else %}Add Recurring Bill{% endif %} | Lazy Panda Finance
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">
+            {% if mode == "edit" %}Edit Recurring Bill{% else %}Add Recurring Bill{% endif %}
+        </h1>
+        <p class="text-muted fw-semibold mb-0">Template used to generate monthly bills</p>
+    </div>
+
+    <a href="{% url 'finance_web_recurring_bills' %}" class="btn btn-light fw-bold rounded-4">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="hero-card mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon" style="background:rgba(255,255,255,.08);">
+                    <i class="bi bi-repeat"></i>
+                </div>
+                <div>
+                    <div class="text-white-50 fw-bold">
+                        {% if mode == "edit" %}Update bill schedule{% else %}Create bill schedule{% endif %}
+                    </div>
+                    <h3 class="fw-bold mb-0">Recurring Bill Details</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card p-4 p-md-5">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">Name</label>
+                        {{ form.name }}
+                        {{ form.name.errors }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Frequency</label>
+                        {{ form.frequency }}
+                        {{ form.frequency.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Account</label>
+                        {{ form.account }}
+                        {{ form.account.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Category</label>
+                        {{ form.category }}
+                        {{ form.category.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Amount Due</label>
+                        {{ form.amount_due }}
+                        {{ form.amount_due.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Due Day</label>
+                        {{ form.due_day }}
+                        {{ form.due_day.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Start Date</label>
+                        {{ form.start_date }}
+                        {{ form.start_date.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">End Date</label>
+                        {{ form.end_date }}
+                        {{ form.end_date.errors }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Notes</label>
+                        {{ form.notes }}
+                        {{ form.notes.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check p-3 rounded-4" style="background:#F8F7F4;">
+                            {{ form.auto_generate }}
+                            <label class="form-check-label fw-bold ms-2">
+                                Auto-generate
+                            </label>
+                            <div class="text-muted small fw-semibold mt-1">
+                                Include this when generating bills.
+                            </div>
+                            {{ form.auto_generate.errors }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check p-3 rounded-4" style="background:#F8F7F4;">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold ms-2">
+                                Active
+                            </label>
+                            <div class="text-muted small fw-semibold mt-1">
+                                Turn off to pause this recurring bill.
+                            </div>
+                            {{ form.is_active.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'finance_web_recurring_bills' %}" class="btn btn-light fw-bold rounded-4">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="btn btn-accent">
+                        {% if mode == "edit" %}Update Recurring Bill{% else %}Save Recurring Bill{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,240 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Transfers | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 767px) {
+        .transfer-filter-form .btn,
+        .transfer-filter-form .form-select,
+        .transfer-filter-form .form-control {
+            width: 100%;
+        }
+
+        .transfer-row {
+            align-items: flex-start !important;
+        }
+
+        .transfer-amount {
+            width: 100%;
+            text-align: left !important;
+        }
+
+        .transfer-actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .transfer-actions form,
+        .transfer-actions .btn,
+        .transfer-actions button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Transfers</h1>
+        <p class="text-muted fw-semibold mb-0">
+            Move money between accounts and pay credit cards
+        </p>
+    </div>
+
+    <a href="{% url 'finance_web_transfer_create' %}" class="btn btn-accent">
+        <i class="bi bi-plus-lg me-1"></i> Add Transfer
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="hero-card h-100">
+            <div class="text-white-50 fw-bold mb-2">Total Transferred</div>
+            <div class="display-5 fw-bold text-money mb-2">
+                ₱{{ total_transferred|floatformat:2|intcomma }}
+            </div>
+            <div class="text-white-50 fw-semibold">
+                For selected month and filters
+            </div>
+
+            <div class="row g-3 mt-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="text-white-50 fw-semibold small">Transfers</div>
+                        <div class="fw-bold fs-5">{{ transfers|length }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                        <div class="text-white-50 fw-semibold small">Credit Card / Loan Payments</div>
+                        <div class="fw-bold fs-5">₱{{ credit_card_payments|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-2">Payment Rule</h5>
+            <p class="text-muted fw-semibold mb-3">
+                Transfer to a credit card or loan is treated as a payment and reduces the amount owed.
+            </p>
+
+            <div class="p-3 rounded-4" style="background:#F8F7F4;">
+                <div class="fw-bold mb-1">
+                    Example
+                </div>
+                <div class="text-muted fw-semibold small">
+                    BPI Bank → Credit Card ₱2,000
+                </div>
+                <div class="small fw-bold mt-2" style="color:#4F8B5B;">
+                    Bank decreases, credit card owed balance decreases.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4 mb-4">
+    <form method="get" class="transfer-filter-form row g-3 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Month</label>
+            <select name="month" class="form-select">
+                <option value="1" {% if month == 1 %}selected{% endif %}>Jan</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>Feb</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>Mar</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>Apr</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>Jun</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>Jul</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>Aug</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>Sep</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>Oct</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>Nov</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>Dec</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Year</label>
+            <input type="number" name="year" value="{{ year }}" class="form-control">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold">From Account</label>
+            <select name="from_account" class="form-select">
+                <option value="">All</option>
+                {% for account in accounts %}
+                    <option value="{{ account.id }}" {% if from_account_id|stringformat:"s" == account.id|stringformat:"s" %}selected{% endif %}>
+                        {{ account.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold">To Account</label>
+            <select name="to_account" class="form-select">
+                <option value="">All</option>
+                {% for account in accounts %}
+                    <option value="{{ account.id }}" {% if to_account_id|stringformat:"s" == account.id|stringformat:"s" %}selected{% endif %}>
+                        {{ account.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button class="btn btn-accent w-100">
+                <i class="bi bi-funnel me-1"></i> Apply
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="app-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Transfer History</h5>
+        <span class="badge rounded-pill text-bg-light">{{ transfers|length }} transfer(s)</span>
+    </div>
+
+    {% if transfers %}
+        <div class="vstack gap-3">
+            {% for transfer in transfers %}
+                <div class="transfer-row d-flex flex-wrap align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                    <div class="mini-icon mb-0"
+                         style="background:{% if transfer.to_account.account_type == 'credit_card' or transfer.to_account.account_type == 'loan' %}rgba(255,99,99,.12){% else %}rgba(79,139,91,.12){% endif %};
+                                color:{% if transfer.to_account.account_type == 'credit_card' or transfer.to_account.account_type == 'loan' %}#ff5b5b{% else %}#4F8B5B{% endif %};">
+                        {% if transfer.to_account.account_type == "credit_card" or transfer.to_account.account_type == "loan" %}
+                            <i class="bi bi-credit-card"></i>
+                        {% else %}
+                            <i class="bi bi-arrow-left-right"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold text-truncate">
+                            {{ transfer.from_account.name }} → {{ transfer.to_account.name }}
+                        </div>
+
+                        <div class="text-muted small fw-semibold text-truncate">
+                            {{ transfer.transfer_date }}
+                            {% if transfer.to_account.account_type == "credit_card" or transfer.to_account.account_type == "loan" %}
+                                • Payment
+                            {% else %}
+                                • Transfer
+                            {% endif %}
+                        </div>
+
+                        {% if transfer.notes %}
+                            <div class="text-muted small fw-semibold text-truncate">
+                                {{ transfer.notes }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="transfer-amount text-end">
+                        <div class="fw-bold">₱{{ transfer.amount|floatformat:2|intcomma }}</div>
+                        {% if transfer.to_account.account_type == "credit_card" or transfer.to_account.account_type == "loan" %}
+                            <span class="badge rounded-pill" style="background:#FFF1F1;color:#ff5b5b;">Payment</span>
+                        {% else %}
+                            <span class="badge rounded-pill" style="background:#EAFBF0;color:#16A34A;">Transfer</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="transfer-actions d-flex gap-2">
+                        <a href="{% url 'finance_web_transfer_edit' transfer.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                            Edit
+                        </a>
+
+                        <form method="post"
+                              action="{% url 'finance_web_transfer_delete' transfer.id %}"
+                              onsubmit="return confirm('Delete this transfer? Account balances will be restored.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light fw-bold rounded-4 text-danger">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-arrow-left-right"></i>
+            </div>
+            <h5 class="fw-bold">No transfers found</h5>
+            <p class="text-muted fw-semibold mb-0">
+                Move money between accounts or pay your credit card.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

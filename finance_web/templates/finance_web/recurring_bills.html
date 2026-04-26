@@ -1,0 +1,132 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Recurring Bills | Lazy Panda Finance{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Recurring Bills</h1>
+        <p class="text-muted fw-semibold mb-0">Create templates and generate monthly bills</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'finance_web_recurring_bill_create' %}" class="btn btn-accent">
+            <i class="bi bi-plus-lg me-1"></i> Add Recurring Bill
+        </a>
+
+        <a href="{% url 'finance_web_bills' %}" class="btn btn-light fw-bold rounded-4">
+            <i class="bi bi-receipt me-1"></i> Bills
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="hero-card h-100">
+            <div class="text-white-50 fw-bold mb-2">Estimated Monthly Bills</div>
+            <div class="display-5 fw-bold text-money mb-2">
+                ₱{{ total_monthly|floatformat:2|intcomma }}
+            </div>
+            <div class="text-white-50 fw-semibold">
+                {{ active_count }} active recurring bill(s)
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="app-card p-4 h-100">
+            <h5 class="fw-bold mb-3">Generate Bills</h5>
+
+            <form method="post" action="{% url 'finance_web_recurring_bills_generate' %}" class="row g-3">
+                {% csrf_token %}
+
+                <div class="col-6">
+                    <label class="form-label fw-bold">Month</label>
+                    <select name="month" class="form-select">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+
+                <div class="col-6">
+                    <label class="form-label fw-bold">Year</label>
+                    <input type="number" name="year" value="{% now 'Y' %}" class="form-control">
+                </div>
+
+                <div class="col-12">
+                    <button class="btn btn-accent w-100">
+                        <i class="bi bi-magic me-1"></i> Generate Selected Month
+                    </button>
+                </div>
+            </form>
+
+            <p class="text-muted fw-semibold small mb-0 mt-3">
+                Existing generated bills for the same recurring bill and due date will be skipped.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Recurring Templates</h5>
+        <span class="badge rounded-pill text-bg-light">{{ recurring_bills|length }} template(s)</span>
+    </div>
+
+    {% if recurring_bills %}
+        <div class="vstack gap-3">
+            {% for item in recurring_bills %}
+                <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                    <div class="mini-icon mb-0"
+                         style="background:{% if item.is_active %}rgba(79,139,91,.12){% else %}rgba(0,0,0,.08){% endif %}; color:{% if item.is_active %}#4F8B5B{% else %}#777{% endif %};">
+                        <i class="bi bi-repeat"></i>
+                    </div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold text-truncate">{{ item.name }}</div>
+                        <div class="text-muted small fw-semibold text-truncate">
+                            {{ item.category.name|default:"No category" }} • {{ item.account.name|default:"No account" }}
+                        </div>
+                        <div class="small fw-bold {% if item.is_active %}text-muted{% else %}text-danger{% endif %}">
+                            {{ item.frequency|title }} • Due day {{ item.due_day }}
+                            {% if not item.is_active %} • Paused{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <div class="fw-bold">₱{{ item.amount_due|floatformat:2|intcomma }}</div>
+                        {% if item.auto_generate %}
+                            <span class="badge rounded-pill" style="background:#EAFBF0;color:#16A34A;">Auto</span>
+                        {% else %}
+                            <span class="badge rounded-pill text-bg-light">Manual</span>
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'finance_web_recurring_bill_edit' item.id %}" class="btn btn-sm btn-light fw-bold rounded-4 ms-auto">
+                        Edit
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-repeat"></i>
+            </div>
+            <h5 class="fw-bold">No recurring bills yet</h5>
+            <p class="text-muted fw-semibold mb-0">Create recurring templates for rent, internet, subscriptions, or insurance.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

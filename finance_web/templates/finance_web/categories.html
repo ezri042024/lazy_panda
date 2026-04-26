@@ -1,0 +1,183 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Categories | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 767px) {
+        .category-filter-form .btn,
+        .category-filter-form .form-select {
+            width: 100%;
+        }
+
+        .category-row {
+            align-items: flex-start !important;
+        }
+
+        .category-actions {
+            width: 100%;
+        }
+
+        .category-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Categories</h1>
+        <p class="text-muted fw-semibold mb-0">Organize income, expenses, transfers, savings, and debts</p>
+    </div>
+
+    <a href="{% url 'finance_web_category_create' %}" class="btn btn-accent">
+        <i class="bi bi-plus-lg me-1"></i> Add Category
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                <i class="bi bi-arrow-down"></i>
+            </div>
+            <div class="text-muted fw-bold small">Income Categories</div>
+            <div class="fw-bold fs-4">{{ income_count }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#FFF1E8;color:#4F8B5B;">
+                <i class="bi bi-arrow-up"></i>
+            </div>
+            <div class="text-muted fw-bold small">Expense Categories</div>
+            <div class="fw-bold fs-4">{{ expense_count }}</div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="mini-card">
+            <div class="mini-icon" style="background:#EFF6FF;color:#2563EB;">
+                <i class="bi bi-arrow-left-right"></i>
+            </div>
+            <div class="text-muted fw-bold small">Transfer Categories</div>
+            <div class="fw-bold fs-4">{{ transfer_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4 mb-4">
+    <form method="get" class="category-filter-form row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Category Type</label>
+            <select name="type" class="form-select">
+                <option value="all" {% if category_type == "all" %}selected{% endif %}>All Types</option>
+                <option value="income" {% if category_type == "income" %}selected{% endif %}>Income</option>
+                <option value="expense" {% if category_type == "expense" %}selected{% endif %}>Expense</option>
+                <option value="transfer" {% if category_type == "transfer" %}selected{% endif %}>Transfer</option>
+                <option value="saving" {% if category_type == "saving" %}selected{% endif %}>Saving</option>
+                <option value="debt" {% if category_type == "debt" %}selected{% endif %}>Debt</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Status</label>
+            <select name="status" class="form-select">
+                <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+                <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <button class="btn btn-accent w-100">
+                <i class="bi bi-funnel me-1"></i> Apply Filters
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="app-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Category List</h5>
+        <span class="badge rounded-pill text-bg-light">{{ categories|length }} category/categories</span>
+    </div>
+
+    {% if categories %}
+        <div class="vstack gap-3">
+            {% for category in categories %}
+                <div class="category-row d-flex flex-wrap align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                    <div class="mini-icon mb-0"
+                         style="background:
+                            {% if category.category_type == 'income' %}#EAFBF0
+                            {% elif category.category_type == 'expense' %}#FFF1E8
+                            {% elif category.category_type == 'transfer' %}#EFF6FF
+                            {% elif category.category_type == 'saving' %}rgba(79,139,91,.12)
+                            {% else %}#FFF1F1{% endif %};
+                            color:
+                            {% if category.category_type == 'income' %}#16A34A
+                            {% elif category.category_type == 'expense' %}#4F8B5B
+                            {% elif category.category_type == 'transfer' %}#2563EB
+                            {% elif category.category_type == 'saving' %}#4F8B5B
+                            {% else %}#ff5b5b{% endif %};">
+                        {% if category.icon %}
+                            <i class="bi {{ category.icon }}"></i>
+                        {% elif category.category_type == "income" %}
+                            <i class="bi bi-arrow-down"></i>
+                        {% elif category.category_type == "expense" %}
+                            <i class="bi bi-arrow-up"></i>
+                        {% elif category.category_type == "transfer" %}
+                            <i class="bi bi-arrow-left-right"></i>
+                        {% elif category.category_type == "saving" %}
+                            <i class="bi bi-flag"></i>
+                        {% else %}
+                            <i class="bi bi-credit-card-2-front"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold text-truncate">{{ category.name }}</div>
+                        <div class="text-muted small fw-semibold">
+                            {{ category.category_type|title }}
+                            {% if category.is_default %} • Default{% endif %}
+                            {% if not category.is_active %} • Inactive{% endif %}
+                        </div>
+
+                        {% if category.color %}
+                            <div class="small text-muted fw-semibold">
+                                Color: {{ category.color }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end">
+                        {% if category.is_active %}
+                            <span class="badge rounded-pill" style="background:#EAFBF0;color:#16A34A;">Active</span>
+                        {% else %}
+                            <span class="badge rounded-pill text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="category-actions ms-auto">
+                        <a href="{% url 'finance_web_category_edit' category.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                            Edit
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-tags"></i>
+            </div>
+            <h5 class="fw-bold">No categories found</h5>
+            <p class="text-muted fw-semibold mb-0">Create categories to organize your money records.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

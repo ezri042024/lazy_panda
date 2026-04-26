@@ -1,0 +1,237 @@
+{% extends "finance_web/base.html" %}
+{% load humanize static finance_web_extras %}
+
+{% block title %}Accounts | Lazy Panda Finance{% endblock %}
+{% block extra_css %}
+<style>
+    .account-logo-wrap,
+    .account-icon-wrap {
+        width: 50px;
+        height: 50px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+    }
+
+    .account-logo-wrap {
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .06);
+    }
+
+    .account-logo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .account-icon-wrap {
+        background: rgba(254, 117, 3, .10);
+        color: #FE7503;
+        font-size: 1.15rem;
+    }
+
+    .account-icon-wrap.liability-icon {
+        background: rgba(255, 99, 99, .12);
+        color: #ff5b5b;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">Accounts</h1>
+        <p class="text-muted fw-semibold mb-0">Wallets, banks, cards, and loans</p>
+    </div>
+
+    <a href="{% url 'finance_web_account_create' %}" class="btn btn-accent">
+        <i class="bi bi-plus-lg me-1"></i> Add Account
+    </a>
+</div>
+
+<div class="hero-card mb-4">
+    <div class="text-white-50 fw-bold mb-2">Account Overview</div>
+    <div class="display-5 fw-bold text-money mb-4">
+        ₱{{ net_worth|floatformat:2|intcomma }}
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                <div class="text-white-50 fw-semibold small">Assets</div>
+                <div class="fw-bold fs-5">₱{{ total_assets|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                <div class="text-white-50 fw-semibold small">Liabilities</div>
+                <div class="fw-bold fs-5">₱{{ total_liabilities|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="app-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Asset Accounts</h5>
+                <span class="badge rounded-pill text-bg-light">{{ asset_accounts|length }} account(s)</span>
+            </div>
+
+            {% if asset_accounts %}
+                <div class="vstack gap-3">
+                    {% for account in asset_accounts %}
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background:#f8f7f4;">
+                            {% with logo_path=account|account_logo %}
+                                {% if logo_path %}
+                                    <div class="account-logo-wrap">
+                                        <img src="{% static logo_path %}"
+                                             alt="{{ account.name }} logo"
+                                             class="account-logo-img">
+                                    </div>
+                                {% else %}
+                                    <div class="account-icon-wrap">
+                                        <i class="bi {{ account|account_default_icon }}"></i>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ account.name }}</div>
+                                <div class="text-muted small fw-semibold">
+                                    {{ account.account_type|cut:"_"|title }}
+                                    {% if account.institution_name %}
+                                        • {{ account.institution_name }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="fw-bold fs-6">
+                                ₱{{ account.current_balance|floatformat:2|intcomma }}
+                            </div>
+                            <a href="{% url 'finance_web_account_edit' account.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                Edit
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-muted fw-semibold">No asset accounts yet.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="app-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Liabilities</h5>
+                <span class="badge rounded-pill text-bg-light">{{ liability_accounts|length }} account(s)</span>
+            </div>
+
+            {% if liability_accounts %}
+                <div class="vstack gap-3">
+                    {% for account in liability_accounts %}
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background:#f8f7f4;">
+                            {% with logo_path=account|account_logo %}
+                                {% if logo_path %}
+                                    <div class="account-logo-wrap">
+                                        <img src="{% static logo_path %}"
+                                             alt="{{ account.name }} logo"
+                                             class="account-logo-img">
+                                    </div>
+                                {% else %}
+                                    <div class="account-icon-wrap liability-icon">
+                                        <i class="bi {{ account|account_default_icon }}"></i>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ account.name }}</div>
+                                <div class="text-muted small fw-semibold">
+                                    {{ account.account_type|cut:"_"|title }}
+                                    {% if account.institution_name %}
+                                        • {{ account.institution_name }}
+                                    {% endif %}
+                                </div>
+
+                                {% if account.account_type == "credit_card" %}
+                                    <div class="small text-muted fw-semibold">
+                                        Limit: ₱{{ account.credit_limit|floatformat:2|intcomma }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="fw-bold fs-6 text-danger">
+                                ₱{{ account.current_balance|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-muted fw-semibold">No liability accounts yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4 mt-4">
+    <h5 class="fw-bold mb-3">All Accounts</h5>
+
+    {% if accounts %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Institution</th>
+                        <th>Currency</th>
+                        <th class="text-end">Current Balance</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                        <tr>
+                            <td class="fw-bold">{{ account.name }}</td>
+                            <td>
+                                {% if account.account_type == "credit_card" or account.account_type == "loan" %}
+                                    <span class="badge rounded-pill text-bg-danger">
+                                        {{ account.account_type|cut:"_"|title }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill" style="background:rgba(79,139,91,.12);color:#4F8B5B;">
+                                        {{ account.account_type|cut:"_"|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ account.institution_name|default:"-" }}</td>
+                            <td>{{ account.currency }}</td>
+                            <td class="text-end fw-bold">
+                                ₱{{ account.current_balance|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'finance_web_account_edit' account.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                    Edit
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <h5 class="fw-bold">No accounts yet</h5>
+            <p class="text-muted fw-semibold mb-0">Add cash, bank, e-wallet, credit card, or loan accounts.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

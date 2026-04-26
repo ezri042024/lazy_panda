@@ -1,0 +1,123 @@
+{% extends "finance_web/base.html" %}
+
+{% block title %}
+    {% if mode == "edit" %}Edit Category{% else %}Add Category{% endif %} | Lazy Panda Finance
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">
+            {% if mode == "edit" %}Edit Category{% else %}Add Category{% endif %}
+        </h1>
+        <p class="text-muted fw-semibold mb-0">Used for transactions, bills, budgets, reports, and goals</p>
+    </div>
+
+    <a href="{% url 'finance_web_categories' %}" class="btn btn-light fw-bold rounded-4">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="hero-card mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon" style="background:rgba(255,255,255,.08);">
+                    <i class="bi bi-tags"></i>
+                </div>
+                <div>
+                    <div class="text-white-50 fw-bold">
+                        {% if mode == "edit" %}Update category{% else %}Create category{% endif %}
+                    </div>
+                    <h3 class="fw-bold mb-0">Category Details</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-card p-4 p-md-5">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">Name</label>
+                        {{ form.name }}
+                        {{ form.name.errors }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Type</label>
+                        {{ form.category_type }}
+                        {{ form.category_type.errors }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Icon</label>
+                        {{ form.icon }}
+                        {{ form.icon.errors }}
+                        <div class="form-text fw-semibold">
+                            Use Bootstrap icon class, example: <code>bi-cart</code>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Color</label>
+                        {{ form.color }}
+                        {{ form.color.errors }}
+                        <div class="form-text fw-semibold">
+                            Optional hex color, example: <code>#4F8B5B</code>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check p-3 rounded-4" style="background:#F8F7F4;">
+                            {{ form.is_default }}
+                            <label class="form-check-label fw-bold ms-2">
+                                Default category
+                            </label>
+                            <div class="text-muted small fw-semibold mt-1">
+                                Useful for system-created categories.
+                            </div>
+                            {{ form.is_default.errors }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check p-3 rounded-4" style="background:#F8F7F4;">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold ms-2">
+                                Active category
+                            </label>
+                            <div class="text-muted small fw-semibold mt-1">
+                                Inactive categories are hidden from normal selection.
+                            </div>
+                            {{ form.is_active.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info rounded-4 mt-4 mb-0">
+                    <strong>Tip:</strong> For expense tracking and budgets, use type <strong>Expense</strong>.
+                    For salary or money coming in, use type <strong>Income</strong>.
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'finance_web_categories' %}" class="btn btn-light fw-bold rounded-4">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="btn btn-accent">
+                        {% if mode == "edit" %}Update Category{% else %}Save Category{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

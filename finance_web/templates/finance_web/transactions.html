@@ -1,0 +1,520 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Transactions | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transaction-summary-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .transaction-summary-card {
+        background: rgba(255, 255, 255, .92);
+        border: 1px solid rgba(255, 255, 255, .72);
+        border-radius: 24px;
+        padding: 16px;
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .transaction-summary-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+    }
+
+    .transaction-summary-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -.4px;
+        color: var(--dark);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .transaction-summary-label {
+        color: var(--muted);
+        font-weight: 850;
+        font-size: .75rem;
+    }
+
+    .transaction-filter-card {
+        padding: 16px !important;
+    }
+
+    .transaction-filter-form {
+        display: grid;
+        grid-template-columns: 120px 105px 130px 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+    }
+
+    .transaction-filter-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .transaction-mobile-list {
+        display: none;
+    }
+
+    .transaction-mobile-card {
+        background: #F8F7F4;
+        border-radius: 22px;
+        padding: 14px;
+    }
+
+    .transaction-mobile-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+    }
+
+    .transaction-mobile-amount {
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .transaction-mobile-meta {
+        color: var(--muted);
+        font-size: .78rem;
+        font-weight: 750;
+    }
+
+    .transaction-mobile-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .transaction-mobile-actions .btn,
+    .transaction-mobile-actions form,
+    .transaction-mobile-actions button {
+        width: 100%;
+    }
+
+    @media (max-width: 420px) {
+        .transaction-mobile-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 1199px) {
+        .transaction-filter-form {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .transaction-filter-actions {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .transaction-page-header {
+            align-items: stretch !important;
+        }
+
+        .transaction-page-header .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .transaction-summary-strip {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-bottom: 14px !important;
+        }
+
+        .transaction-summary-card {
+            padding: 12px 14px;
+            border-radius: 20px;
+        }
+
+        .transaction-summary-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+        }
+
+        .transaction-summary-value {
+            font-size: 1rem;
+        }
+
+        .transaction-filter-card {
+            padding: 12px !important;
+            border-radius: 22px !important;
+            margin-bottom: 14px !important;
+        }
+
+        .transaction-filter-form {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .transaction-filter-form .form-label {
+            font-size: .76rem;
+            margin-bottom: 5px;
+        }
+
+        .transaction-filter-form .form-control,
+        .transaction-filter-form .form-select {
+            min-height: 44px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            font-size: .9rem;
+        }
+
+        .transaction-filter-span {
+            grid-column: 1 / -1;
+        }
+
+        .transaction-filter-actions {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .transaction-filter-actions .btn {
+            width: 100%;
+            margin-left: 0 !important;
+            padding-top: 11px;
+            padding-bottom: 11px;
+        }
+
+        .transaction-table-wrap {
+            display: none;
+        }
+
+        .transaction-mobile-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .transaction-history-card {
+            padding: 14px !important;
+            border-radius: 24px !important;
+        }
+
+        .transaction-history-header {
+            align-items: flex-start !important;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .transaction-filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .transaction-filter-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .transaction-mobile-amount {
+            width: 100%;
+            text-align: left !important;
+            margin-top: 8px;
+        }
+
+        .transaction-mobile-top {
+            align-items: flex-start !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="transaction-page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Transactions</h1>
+        <p class="text-muted fw-semibold mb-0">Track income, expenses, and adjustments</p>
+    </div>
+
+    <a href="{% url 'finance_web_transaction_create' %}" class="btn btn-accent">
+        <i class="bi bi-plus-lg me-1"></i> Add Transaction
+    </a>
+</div>
+
+<div class="transaction-summary-strip mb-4">
+    <div class="transaction-summary-card">
+        <div class="transaction-summary-icon" style="background:#EAFBF0;color:#16A34A;">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+        <div class="min-w-0">
+            <div class="transaction-summary-label">Income</div>
+            <div class="transaction-summary-value">₱{{ total_income|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="transaction-summary-card">
+        <div class="transaction-summary-icon" style="background:#FFF1E8;color:#4F8B5B;">
+            <i class="bi bi-arrow-up"></i>
+        </div>
+        <div class="min-w-0">
+            <div class="transaction-summary-label">Expense</div>
+            <div class="transaction-summary-value">₱{{ total_expense|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="transaction-summary-card">
+        <div class="transaction-summary-icon" style="background:#EFF6FF;color:#2563EB;">
+            <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="min-w-0">
+            <div class="transaction-summary-label">Net</div>
+            <div class="transaction-summary-value">₱{{ net_total|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card transaction-filter-card mb-4">
+    <form method="get" class="transaction-filter-form">
+        <div>
+            <label class="form-label fw-bold">Month</label>
+            <select name="month" class="form-select">
+                <option value="1" {% if month == 1 %}selected{% endif %}>Jan</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>Feb</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>Mar</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>Apr</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>Jun</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>Jul</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>Aug</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>Sep</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>Oct</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>Nov</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>Dec</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label fw-bold">Year</label>
+            <input type="number" name="year" value="{{ year }}" class="form-control">
+        </div>
+
+        <div>
+            <label class="form-label fw-bold">Type</label>
+            <select name="type" class="form-select">
+                <option value="all" {% if transaction_type == "all" %}selected{% endif %}>All</option>
+                <option value="income" {% if transaction_type == "income" %}selected{% endif %}>Income</option>
+                <option value="expense" {% if transaction_type == "expense" %}selected{% endif %}>Expense</option>
+                <option value="adjustment" {% if transaction_type == "adjustment" %}selected{% endif %}>Adjustment</option>
+            </select>
+        </div>
+
+        <div class="transaction-filter-span">
+            <label class="form-label fw-bold">Account</label>
+            <select name="account" class="form-select">
+                <option value="">All accounts</option>
+                {% for account in accounts %}
+                    <option value="{{ account.id }}" {% if selected_account_id|stringformat:"s" == account.id|stringformat:"s" %}selected{% endif %}>
+                        {{ account.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="transaction-filter-span">
+            <label class="form-label fw-bold">Category</label>
+            <select name="category" class="form-select">
+                <option value="">All categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category_id|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }} — {{ category.category_type|title }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="transaction-filter-actions">
+            <button class="btn btn-accent">
+                <i class="bi bi-funnel me-1"></i> Apply
+            </button>
+
+            <a href="{% url 'finance_web_transactions' %}" class="btn btn-light fw-bold rounded-4">
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="app-card transaction-history-card p-4">
+    <div class="transaction-history-header d-flex justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h5 class="fw-bold mb-1">Transaction History</h5>
+            <p class="text-muted fw-semibold small mb-0">Showing {{ transactions|length }} record(s)</p>
+        </div>
+
+        <span class="badge rounded-pill text-bg-light">{{ transactions|length }} record(s)</span>
+    </div>
+
+    {% if transactions %}
+        <div class="transaction-table-wrap table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Account</th>
+                        <th>Type</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in transactions %}
+                        <tr>
+                            <td class="fw-semibold text-muted">{{ item.transaction_date }}</td>
+                            <td>
+                                <div class="fw-bold">{{ item.title }}</div>
+                                {% if item.notes %}
+                                    <div class="small text-muted">{{ item.notes|truncatechars:60 }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.category.name|default:"-" }}</td>
+                            <td>{{ item.account.name }}</td>
+                            <td>
+                                {% if item.transaction_type == "income" %}
+                                    <span class="badge rounded-pill" style="background:#EAFBF0;color:#16A34A;">Income</span>
+                                {% elif item.transaction_type == "expense" %}
+                                    <span class="badge rounded-pill" style="background:#FFF1E8;color:#4F8B5B;">Expense</span>
+                                {% else %}
+                                    <span class="badge rounded-pill text-bg-secondary">Adjustment</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">
+                                {% if item.transaction_type == "income" %}
+                                    <span style="color:#16A34A;">+₱{{ item.amount|floatformat:2|intcomma }}</span>
+                                {% elif item.transaction_type == "expense" %}
+                                    <span style="color:#4F8B5B;">-₱{{ item.amount|floatformat:2|intcomma }}</span>
+                                {% else %}
+                                    ₱{{ item.amount|floatformat:2|intcomma }}
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if item.paid_bills.exists %}
+                                    {% with paid_bill=item.paid_bills.first %}
+                                        <a href="{% url 'finance_web_bill_edit' paid_bill.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                            View Bill
+                                        </a>
+                                    {% endwith %}
+                                {% else %}
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="{% url 'finance_web_transaction_edit' item.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                            Edit
+                                        </a>
+
+                                        <form method="post"
+                                              action="{% url 'finance_web_transaction_delete' item.id %}"
+                                              onsubmit="return confirm('Delete this transaction? Account balance will be restored.');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-light fw-bold rounded-4 text-danger">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="transaction-mobile-list">
+            {% for item in transactions %}
+                <div class="transaction-mobile-card">
+                    <div class="transaction-mobile-top d-flex align-items-center gap-3">
+                        {% if item.transaction_type == "income" %}
+                            <div class="transaction-mobile-icon" style="background:#EAFBF0;color:#16A34A;">
+                                <i class="bi bi-arrow-down"></i>
+                            </div>
+                        {% elif item.transaction_type == "expense" %}
+                            <div class="transaction-mobile-icon" style="background:rgba(79,139,91,.12);color:#4F8B5B;">
+                                <i class="bi bi-arrow-up"></i>
+                            </div>
+                        {% else %}
+                            <div class="transaction-mobile-icon" style="background:#EFF6FF;color:#2563EB;">
+                                <i class="bi bi-sliders"></i>
+                            </div>
+                        {% endif %}
+
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-bold text-truncate">{{ item.title }}</div>
+                            <div class="transaction-mobile-meta text-truncate">
+                                {{ item.category.name|default:"-" }} • {{ item.account.name }}
+                            </div>
+                            <div class="transaction-mobile-meta">
+                                {{ item.transaction_date }}
+                                {% if item.paid_bills.exists %}
+                                    • Bill Payment
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="transaction-mobile-amount text-end">
+                            {% if item.transaction_type == "income" %}
+                                <span style="color:#16A34A;">+₱{{ item.amount|floatformat:2|intcomma }}</span>
+                            {% elif item.transaction_type == "expense" %}
+                                <span style="color:#4F8B5B;">-₱{{ item.amount|floatformat:2|intcomma }}</span>
+                            {% else %}
+                                ₱{{ item.amount|floatformat:2|intcomma }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if item.notes %}
+                        <div class="transaction-mobile-meta mt-2">
+                            {{ item.notes|truncatechars:90 }}
+                        </div>
+                    {% endif %}
+
+                    <div class="transaction-mobile-actions mt-3">
+                        {% if item.paid_bills.exists %}
+                            {% with paid_bill=item.paid_bills.first %}
+                                <a href="{% url 'finance_web_bill_edit' paid_bill.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                    View Linked Bill
+                                </a>
+                            {% endwith %}
+                        {% else %}
+                            <a href="{% url 'finance_web_transaction_edit' item.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                                Edit
+                            </a>
+
+                            <form method="post"
+                                  action="{% url 'finance_web_transaction_delete' item.id %}"
+                                  onsubmit="return confirm('Delete this transaction? Account balance will be restored.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-light fw-bold rounded-4 text-danger">
+                                    Delete
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <h5 class="fw-bold">No transactions found</h5>
+            <p class="text-muted fw-semibold mb-0">Try changing your filters or add your first transaction.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
