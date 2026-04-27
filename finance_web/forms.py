@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm
 
 from finance.models import Category, Account, Transaction, RecurringBill, Bill, Transfer, Debt, DebtPayment, \
-    SavingsGoal, GoalContribution
+    SavingsGoal, GoalContribution, Budget
 
 
 class WebLoginForm(AuthenticationForm):
@@ -657,6 +657,85 @@ class CategoryWebForm(forms.ModelForm):
             if queryset.exists():
                 raise forms.ValidationError(
                     "You already have a category with this name and type."
+                )
+
+        return cleaned_data
+
+
+class BudgetWebForm(forms.ModelForm):
+    class Meta:
+        model = Budget
+        fields = [
+            "category",
+            "amount_limit",
+            "month",
+            "year",
+        ]
+        widgets = {
+            "category": forms.Select(attrs={"class": "form-select"}),
+            "amount_limit": forms.NumberInput(attrs={
+                "class": "form-control",
+                "step": "0.01",
+            }),
+            "month": forms.NumberInput(attrs={
+                "class": "form-control",
+                "min": 1,
+                "max": 12,
+            }),
+            "year": forms.NumberInput(attrs={
+                "class": "form-control",
+                "min": 2000,
+            }),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        if user:
+            self.fields["category"].queryset = Category.objects.filter(
+                user=user,
+                is_active=True,
+                category_type="expense",
+            ).order_by("name")
+
+    def clean_amount_limit(self):
+        amount = self.cleaned_data["amount_limit"]
+
+        if amount <= 0:
+            raise forms.ValidationError("Budget amount must be greater than zero.")
+
+        return amount
+
+    def clean_month(self):
+        month = self.cleaned_data["month"]
+
+        if month < 1 or month > 12:
+            raise forms.ValidationError("Month must be between 1 and 12.")
+
+        return month
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        category = cleaned_data.get("category")
+        month = cleaned_data.get("month")
+        year = cleaned_data.get("year")
+
+        if self.user and category and month and year:
+            queryset = Budget.objects.filter(
+                user=self.user,
+                category=category,
+                month=month,
+                year=year,
+            )
+
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+
+            if queryset.exists():
+                raise forms.ValidationError(
+                    "A budget for this category, month, and year already exists."
                 )
 
         return cleaned_data

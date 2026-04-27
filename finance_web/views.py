@@ -13,7 +13,8 @@ from finance.services import decrease_account_balance, increase_account_balance,
 from finance.views import BillViewSet
 
 from .forms import WebLoginForm, WebRegisterForm, AccountWebForm, TransactionWebForm, RecurringBillWebForm, BillWebForm, \
-    TransferWebForm, DebtPaymentWebForm, DebtWebForm, SavingsGoalWebForm, GoalContributionWebForm, CategoryWebForm
+    TransferWebForm, DebtPaymentWebForm, DebtWebForm, SavingsGoalWebForm, GoalContributionWebForm, CategoryWebForm, \
+    BudgetWebForm
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -1765,3 +1766,143 @@ def reports_view(request):
     }
 
     return render(request, "finance_web/reports.html", context)
+
+
+@login_required
+def budgets_view(request):
+    today = timezone.localdate()
+
+    month = int(request.GET.get("month", today.month))
+    year = int(request.GET.get("year", today.year))
+
+    budgets = Budget.objects.filter(
+        user=request.user,
+        month=month,
+        year=year,
+    ).select_related("category").order_by("category__name")
+
+    transactions = Transaction.objects.filter(
+        user=request.user,
+        transaction_type="expense",
+        transaction_date__month=month,
+        transaction_date__year=year,
+    )
+
+    budget_rows = []
+
+    total_limit = 0
+    total_spent = 0
+
+    for budget in budgets:
+        spent = transactions.filter(
+            category=budget.category,
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        remaining = budget.amount_limit - spent
+
+        progress_percent = 0
+        if budget.amount_limit > 0:
+            progress_percent = round((spent / budget.amount_limit) * 100, 2)
+
+        total_limit += budget.amount_limit
+        total_spent += spent
+
+        budget_rows.append({
+            "budget": budget,
+            "spent": spent,
+            "remaining": remaining,
+            "progress_percent": progress_percent,
+            "is_over": spent > budget.amount_limit,
+        })
+
+    total_remaining = total_limit - total_spent
+
+    total_usage_percent = 0
+    if total_limit > 0:
+        total_usage_percent = round((total_spent / total_limit) * 100, 2)
+
+    context = {
+        "month": month,
+        "year": year,
+        "budgets": budgets,
+        "budget_rows": budget_rows,
+        "total_limit": total_limit,
+        "total_spent": total_spent,
+        "total_remaining": total_remaining,
+        "total_usage_percent": total_usage_percent,
+    }
+
+    return render(request, "finance_web/budgets.html", context)
+
+
+@login_required
+def budget_create_view(request):
+    today = timezone.localdate()
+
+    initial = {
+        "month": request.GET.get("month", today.month),
+        "year": request.GET.get("year", today.year),
+    }
+
+    form = BudgetWebForm(
+        request.POST or None,
+        user=request.user,
+        initial=initial,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        budget = form.save(commit=False)
+        budget.user = request.user
+        budget.save()
+
+        messages.success(request, "Budget created successfully.")
+        return redirect("finance_web_budgets")
+
+    return render(request, "finance_web/budget_form.html", {
+        "form": form,
+        "mode": "create",
+    })
+
+
+@login_required
+def budget_edit_view(request, pk):
+    budget = get_object_or_404(
+        Budget,
+        pk=pk,
+        user=request.user,
+    )
+
+    form = BudgetWebForm(
+        request.POST or None,
+        instance=budget,
+        user=request.user,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+
+        messages.success(request, "Budget updated successfully.")
+        return redirect("finance_web_budgets")
+
+    return render(request, "finance_web/budget_form.html", {
+        "form": form,
+        "mode": "edit",
+        "budget": budget,
+    })
+
+
+@login_required
+def budget_delete_view(request, pk):
+    budget = get_object_or_404(
+        Budget,
+        pk=pk,
+        user=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect("finance_web_budgets")
+
+    budget.delete()
+
+    messages.success(request, "Budget deleted successfully.")
+    return redirect("finance_web_budgets")

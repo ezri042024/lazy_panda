@@ -77,5 +77,10 @@ urlpatterns = [
     path("categories/add/", views.category_create_view, name="finance_web_category_create"),
     path("categories/<int:pk>/edit/", views.category_edit_view, name="finance_web_category_edit"),
 
+    path("budgets/", views.budgets_view, name="finance_web_budgets"),
+    path("budgets/add/", views.budget_create_view, name="finance_web_budget_create"),
+    path("budgets/<int:pk>/edit/", views.budget_edit_view, name="finance_web_budget_edit"),
+    path("budgets/<int:pk>/delete/", views.budget_delete_view, name="finance_web_budget_delete"),
+
     path("reports/", views.reports_view, name="finance_web_reports"),
 ]

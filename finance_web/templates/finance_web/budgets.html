@@ -1,0 +1,230 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Budgets | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .budget-progress {
+        height: 10px;
+        background: #eeeeee;
+    }
+
+    @media (max-width: 767px) {
+        .budget-filter-form {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 110px;
+            gap: .5rem !important;
+        }
+
+        .budget-filter-form button {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .budget-row {
+            align-items: flex-start !important;
+        }
+
+        .budget-actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .budget-actions .btn,
+        .budget-actions form,
+        .budget-actions button {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .budget-filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .budget-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Budgets</h1>
+        <p class="text-muted fw-semibold mb-0">Set monthly limits and track category spending</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'finance_web_budget_create' %}?month={{ month }}&year={{ year }}" class="btn btn-accent">
+            <i class="bi bi-plus-lg me-1"></i> Add Budget
+        </a>
+
+        <form method="get" class="budget-filter-form d-flex flex-wrap gap-2 align-items-center">
+            <select name="month" class="form-select" style="width: 140px;">
+                <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+            </select>
+
+            <input type="number" name="year" value="{{ year }}" class="form-control" style="width: 115px;">
+
+            <button class="btn btn-light fw-bold rounded-4">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="hero-card h-100">
+            <div class="text-white-50 fw-bold mb-2">Budget Used</div>
+            <div class="display-5 fw-bold text-money mb-2">
+                {{ total_usage_percent }}%
+            </div>
+
+            <div class="text-white-50 fw-semibold mb-3">
+                ₱{{ total_spent|floatformat:2|intcomma }}
+                of ₱{{ total_limit|floatformat:2|intcomma }}
+            </div>
+
+            <div class="progress rounded-pill" style="height: 11px; background:rgba(255,255,255,.12);">
+                <div class="progress-bar"
+                     style="width: {{ total_usage_percent }}%; background:#FE7503;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="row g-3 h-100">
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:rgba(254,117,3,.12);color:#FE7503;">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Budget Limit</div>
+                    <div class="fw-bold fs-5">₱{{ total_limit|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#FFF1E8;color:#FE7503;">
+                        <i class="bi bi-arrow-up"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Spent</div>
+                    <div class="fw-bold fs-5">₱{{ total_spent|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="mini-card">
+                    <div class="mini-icon" style="background:#EAFBF0;color:#16A34A;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="text-muted fw-bold small">Remaining</div>
+                    <div class="fw-bold fs-4">₱{{ total_remaining|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold mb-1">Budget Categories</h5>
+            <p class="text-muted fw-semibold small mb-0">{{ month }}/{{ year }}</p>
+        </div>
+
+        <span class="badge rounded-pill text-bg-light">{{ budgets|length }} budget(s)</span>
+    </div>
+
+    {% if budget_rows %}
+        <div class="vstack gap-3">
+            {% for row in budget_rows %}
+                <div class="budget-row d-flex flex-wrap align-items-center gap-3 p-3 rounded-4" style="background:#F8F7F4;">
+                    <div class="mini-icon mb-0"
+                         style="background:{% if row.is_over %}#FFF1F1{% else %}rgba(254,117,3,.12){% endif %};
+                                color:{% if row.is_over %}#ff5b5b{% else %}#FE7503{% endif %};">
+                        {% if row.is_over %}
+                            <i class="bi bi-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="bi bi-pie-chart"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex justify-content-between gap-3 mb-1">
+                            <div class="fw-bold text-truncate">
+                                {{ row.budget.category.name }}
+                            </div>
+
+                            <div class="fw-bold text-nowrap {% if row.is_over %}text-danger{% endif %}">
+                                {{ row.progress_percent }}%
+                            </div>
+                        </div>
+
+                        <div class="text-muted small fw-semibold mb-2">
+                            Spent ₱{{ row.spent|floatformat:2|intcomma }}
+                            of ₱{{ row.budget.amount_limit|floatformat:2|intcomma }}
+                            {% if row.is_over %}
+                                • Over budget
+                            {% else %}
+                                • Remaining ₱{{ row.remaining|floatformat:2|intcomma }}
+                            {% endif %}
+                        </div>
+
+                        <div class="progress rounded-pill budget-progress">
+                            <div class="progress-bar"
+                                 style="width: {{ row.progress_percent }}%; background:{% if row.is_over %}#ff5b5b{% else %}#FE7503{% endif %};">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="budget-actions d-flex gap-2 ms-auto">
+                        <a href="{% url 'finance_web_budget_edit' row.budget.id %}" class="btn btn-sm btn-light fw-bold rounded-4">
+                            Edit
+                        </a>
+
+                        <form method="post"
+                              action="{% url 'finance_web_budget_delete' row.budget.id %}"
+                              onsubmit="return confirm('Delete this budget?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light fw-bold rounded-4 text-danger">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="brand-icon mx-auto mb-3">
+                <i class="bi bi-pie-chart"></i>
+            </div>
+            <h5 class="fw-bold">No budgets yet</h5>
+            <p class="text-muted fw-semibold mb-0">
+                Create category budgets to compare planned vs actual spending.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
