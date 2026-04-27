@@ -11,6 +11,7 @@ from finance.models import Account, Transaction, Bill, Debt, SavingsGoal, Budget
 from finance.services import decrease_account_balance, increase_account_balance, generate_recurring_bills_for_user, \
     increase_debt_balance, decrease_debt_balance, decrease_goal_amount, increase_goal_amount
 from finance.views import BillViewSet
+from .ai import generate_report_ai_summary
 
 from .forms import WebLoginForm, WebRegisterForm, AccountWebForm, TransactionWebForm, RecurringBillWebForm, BillWebForm, \
     TransferWebForm, DebtPaymentWebForm, DebtWebForm, SavingsGoalWebForm, GoalContributionWebForm, CategoryWebForm, \
@@ -1695,10 +1696,20 @@ def reports_view(request):
     unpaid_bills_count = bills.exclude(status="paid").count()
 
     total_budget_limit = budgets.aggregate(
-        total=Sum("amount_limit"),
+        total=Sum("amount_limit")
     )["total"] or 0
 
-    total_budget_spent = total_expense
+    budget_category_ids = list(
+        budgets.values_list("category_id", flat=True)
+    )
+
+    total_budget_spent = transactions.filter(
+        transaction_type="expense",
+        category_id__in=budget_category_ids,
+    ).aggregate(
+        total=Sum("amount")
+    )["total"] or 0
+
     total_budget_remaining = total_budget_limit - total_budget_spent
 
     budget_usage_percent = 0
@@ -1740,6 +1751,56 @@ def reports_view(request):
     if total_goal_target > 0:
         goal_progress_percent = round((total_goal_saved / total_goal_target) * 100, 2)
 
+    expense_by_category_text = "\n".join(
+        [
+            f"- {item['category__name']}: ₱{item['total']}"
+            for item in expense_by_category
+        ]
+    ) or "No expense category data."
+
+    budget_rows_text = "\n".join(
+        [
+            (
+                f"- {row['category_name']}: "
+                f"spent ₱{row['spent']} of ₱{row['amount_limit']} "
+                f"({row['progress_percent']}% used)"
+            )
+            for row in budget_rows
+        ]
+    ) or "No budget category data."
+
+    ai_summary = None
+
+    if request.GET.get("ai") == "1":
+        report_data = {
+            "month": month,
+            "year": year,
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "net_cashflow": net_cashflow,
+            "total_assets": total_assets,
+            "total_liabilities": total_liabilities,
+            "net_worth": net_worth,
+            "total_budget_limit": total_budget_limit,
+            "total_budget_spent": total_budget_spent,
+            "total_budget_remaining": total_budget_remaining,
+            "budget_usage_percent": budget_usage_percent,
+            "total_bills_due": total_bills_due,
+            "total_bills_paid": total_bills_paid,
+            "unpaid_bills_total": unpaid_bills_total,
+            "total_debt_balance": total_debt_balance,
+            "total_goal_target": total_goal_target,
+            "total_goal_saved": total_goal_saved,
+            "goal_progress_percent": goal_progress_percent,
+            "expense_by_category_text": expense_by_category_text,
+            "budget_rows_text": budget_rows_text,
+        }
+
+        try:
+            ai_summary = generate_report_ai_summary(report_data)
+        except Exception as error:
+            ai_summary = f"AI summary failed: {error}"
+
     context = {
         "month": month,
         "year": year,
@@ -1771,6 +1832,8 @@ def reports_view(request):
         "total_goal_target": total_goal_target,
         "total_goal_saved": total_goal_saved,
         "goal_progress_percent": goal_progress_percent,
+
+        "ai_summary": ai_summary,
     }
 
     return render(request, "finance_web/reports.html", context)
