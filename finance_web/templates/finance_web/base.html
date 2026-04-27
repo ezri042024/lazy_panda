@@ -70,9 +70,28 @@
 
     .sidebar-inner {
         height: 100%;
+        min-height: 0;
         display: flex;
         flex-direction: column;
     }
+
+    .sidebar-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, .12);
+        border-radius: 999px;
+    }
+
+
 
     .main-content {
         margin-left: 292px;
@@ -180,8 +199,8 @@
     }
 
     .sidebar-footer {
-        margin-top: auto;
-        padding-top: 18px;
+        flex: 0 0 auto;
+        padding-top: 14px;
     }
 
     .user-card {
@@ -544,6 +563,25 @@
         margin-top: 3px;
     }
 
+    .user-card {
+        overflow: hidden;
+    }
+
+    .user-card .d-flex {
+        min-width: 0;
+    }
+
+    .user-info-text {
+        min-width: 0;
+        flex: 1 1 auto;
+        max-width: 100%;
+    }
+
+    .user-info-text .text-truncate {
+        display: block;
+        max-width: 100%;
+    }
+
     @keyframes pageSpin {
         to {
             transform: rotate(360deg);
@@ -608,76 +646,77 @@
                         <div class="brand-subtitle">Finance Web</div>
                     </div>
                 </div>
+                <div class="sidebar-scroll">
+                    <div class="sidebar-section-label">Menu</div>
 
-                <div class="sidebar-section-label">Menu</div>
+                    <nav class="nav flex-column">
+                        <a href="{% url 'finance_web_dashboard' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'finance_web_dashboard' %}active{% endif %}">
+                            <i class="bi bi-grid-1x2-fill"></i>
+                            <span>Dashboard</span>
+                        </a>
 
-                <nav class="nav flex-column">
-                    <a href="{% url 'finance_web_dashboard' %}"
-                       class="nav-link {% if request.resolver_match.url_name == 'finance_web_dashboard' %}active{% endif %}">
-                        <i class="bi bi-grid-1x2-fill"></i>
-                        <span>Dashboard</span>
-                    </a>
+                        <a href="{% url 'finance_web_transactions' %}"
+                           class="nav-link {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-receipt"></i>
+                            <span>Transactions</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_transactions' %}"
-                       class="nav-link {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-receipt"></i>
-                        <span>Transactions</span>
-                    </a>
+                        <a href="{% url 'finance_web_accounts' %}"
+                           class="nav-link {% if 'account' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-wallet2"></i>
+                            <span>Accounts</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_accounts' %}"
-                       class="nav-link {% if 'account' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-wallet2"></i>
-                        <span>Accounts</span>
-                    </a>
+                        <a href="{% url 'finance_web_bills' %}"
+                           class="nav-link {% if 'bill' in request.resolver_match.url_name and 'recurring' not in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-calendar2-week"></i>
+                            <span>Bills</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_bills' %}"
-                       class="nav-link {% if 'bill' in request.resolver_match.url_name and 'recurring' not in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-calendar2-week"></i>
-                        <span>Bills</span>
-                    </a>
+                        <a href="{% url 'finance_web_recurring_bills' %}"
+                           class="nav-link {% if 'recurring_bill' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-repeat"></i>
+                            <span>Recurring Bills</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_recurring_bills' %}"
-                       class="nav-link {% if 'recurring_bill' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-repeat"></i>
-                        <span>Recurring Bills</span>
-                    </a>
+                        <a href="{% url 'finance_web_transfers' %}"
+                           class="nav-link {% if 'transfer' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span>Transfers</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_transfers' %}"
-                       class="nav-link {% if 'transfer' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-arrow-left-right"></i>
-                        <span>Transfers</span>
-                    </a>
+                        <a href="{% url 'finance_web_debts' %}"
+                           class="nav-link {% if 'debt' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-credit-card-2-front"></i>
+                            <span>Debts</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_debts' %}"
-                       class="nav-link {% if 'debt' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-credit-card-2-front"></i>
-                        <span>Debts</span>
-                    </a>
+                        <a href="{% url 'finance_web_budgets' %}"
+                           class="nav-link {% if 'budget' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-pie-chart"></i>
+                            <span>Budgets</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_budgets' %}"
-                       class="nav-link {% if 'budget' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-pie-chart"></i>
-                        <span>Budgets</span>
-                    </a>
+                        <a href="{% url 'finance_web_goals' %}"
+                           class="nav-link {% if 'goal' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-flag"></i>
+                            <span>Goals</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_goals' %}"
-                       class="nav-link {% if 'goal' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-flag"></i>
-                        <span>Goals</span>
-                    </a>
+                        <a href="{% url 'finance_web_reports' %}"
+                           class="nav-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>Reports</span>
+                        </a>
 
-                    <a href="{% url 'finance_web_reports' %}"
-                       class="nav-link {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-bar-chart"></i>
-                        <span>Reports</span>
-                    </a>
-
-                    <a href="{% url 'finance_web_categories' %}"
-                       class="nav-link {% if 'categor' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-tags"></i>
-                        <span>Categories</span>
-                    </a>
-                </nav>
+                        <a href="{% url 'finance_web_categories' %}"
+                           class="nav-link {% if 'categor' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-tags"></i>
+                            <span>Categories</span>
+                        </a>
+                    </nav>
+                </div>
 
                 <div class="sidebar-footer">
                     <div class="user-card mb-3">
@@ -685,7 +724,8 @@
                             <div class="user-avatar">
                                 {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
                             </div>
-                            <div class="min-w-0">
+
+                            <div class="user-info-text min-w-0">
                                 <div class="fw-bold text-truncate">
                                     {% if request.user.first_name %}
                                         {{ request.user.first_name }} {{ request.user.last_name }}
@@ -693,6 +733,7 @@
                                         {{ request.user.username }}
                                     {% endif %}
                                 </div>
+
                                 <div class="small text-muted fw-semibold text-truncate">
                                     {{ request.user.email|default:"Personal finance" }}
                                 </div>

@@ -98,6 +98,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+        max-width: 100%;
     }
 
     .transaction-mobile-actions .btn,
@@ -222,15 +223,45 @@
             grid-template-columns: 1fr;
         }
 
-        .transaction-mobile-amount {
-            width: 100%;
-            text-align: left !important;
-            margin-top: 8px;
+        .transaction-mobile-top {
+            display: grid !important;
+            grid-template-columns: 44px 1fr;
+            gap: 12px !important;
+            align-items: start !important;
         }
 
-        .transaction-mobile-top {
-            align-items: flex-start !important;
+        .transaction-mobile-amount {
+            grid-column: 2;
+            width: 100%;
+            text-align: left !important;
+            margin-top: 2px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.2;
         }
+    }
+
+    .transaction-mobile-card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .transaction-mobile-top {
+        min-width: 0;
+    }
+
+    .transaction-mobile-amount {
+        max-width: 120px;
+        flex: 0 1 auto;
+        overflow-wrap: anywhere;
+    }
+
+    .transaction-history-header {
+        min-width: 0;
+    }
+
+    .transaction-history-header .badge {
+        flex: 0 0 auto;
     }
 </style>
 {% endblock %}
@@ -351,13 +382,13 @@
 </div>
 
 <div class="app-card transaction-history-card p-4">
-    <div class="transaction-history-header d-flex justify-content-between align-items-center gap-3 mb-3">
+    <div class="transaction-history-header d-flex justify-content-between align-items-start gap-3 mb-3">
         <div>
             <h5 class="fw-bold mb-1">Transaction History</h5>
             <p class="text-muted fw-semibold small mb-0">Showing {{ transactions|length }} record(s)</p>
         </div>
 
-        <span class="badge rounded-pill text-bg-light">{{ transactions|length }} record(s)</span>
+        <span class="badge rounded-pill text-bg-light text-nowrap">{{ transactions|length }} record(s)</span>
     </div>
 
     {% if transactions %}
