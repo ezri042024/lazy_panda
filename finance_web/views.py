@@ -157,7 +157,15 @@ def dashboard_view(request):
         total=Sum("amount_limit")
     )["total"] or 0
 
-    total_budget_spent = total_expense
+    budget_category_ids = list(budgets.values_list("category_id", flat=True))
+
+    total_budget_spent = transactions.filter(
+        transaction_type="expense",
+        category_id__in=budget_category_ids,
+    ).aggregate(
+        total=Sum("amount")
+    )["total"] or 0
+
     total_budget_remaining = total_budget_limit - total_budget_spent
 
     context = {
