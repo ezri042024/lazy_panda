@@ -1,9 +1,14 @@
+import re
+from decimal import InvalidOperation, Decimal
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Sum, Q
+from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from finance.defaults import create_default_finance_setup
 from finance.models import Account, Transaction, Bill, Debt, SavingsGoal, Budget, Category, RecurringBill, Transfer, \
@@ -635,7 +640,7 @@ def bill_mark_paid_view(request, pk):
 
         payment_transaction = Transaction.objects.create(
             user=request.user,
-            account=bill.account,
+            account=payment_account,
             category=bill.category,
             transaction_type="expense",
             title=bill.name,
@@ -1977,3 +1982,896 @@ def budget_delete_view(request, pk):
 
     messages.success(request, "Budget deleted successfully.")
     return redirect("finance_web_budgets")
+
+
+def extract_amount(text):
+    matches = re.findall(r"\d+(?:,\d{3})*(?:\.\d+)?", text)
+
+    if not matches:
+        return None
+
+    raw_amount = matches[-1].replace(",", "")
+
+    try:
+        return Decimal(raw_amount)
+    except InvalidOperation:
+        return None
+
+
+def remove_amount_from_text(text, amount):
+    if amount is None:
+        return text.strip()
+
+    amount_text = str(amount).rstrip("0").rstrip(".")
+    cleaned = re.sub(r"\d+(?:,\d{3})*(?:\.\d+)?", "", text, count=1)
+    return cleaned.strip()
+
+def find_account_by_text(user, account_text):
+    account_text = clean_search_text(account_text)
+
+    accounts = Account.objects.filter(
+        user=user,
+        is_active=True,
+    )
+
+    for account in accounts:
+        haystack = clean_search_text(
+            f"{account.name or ''} {account.institution_name or ''}"
+        )
+
+        if account_text and account_text in haystack:
+            return account
+
+        for word in account_text.split():
+            if len(word) >= 2 and word in haystack:
+                return account
+
+    return None
+
+
+def parse_transfer_command(user, message, amount):
+    text = message.lower()
+
+    patterns = [
+        # transfer 100 from BPI to BDO
+        r"(?:transfer|send|move)?\s*\d+(?:,\d{3})*(?:\.\d+)?\s+from\s+(.+?)\s+to\s+(.+)$",
+
+        # transfer from BPI to BDO 100
+        r"(?:transfer|send|move)?\s*from\s+(.+?)\s+to\s+(.+?)\s+\d+(?:,\d{3})*(?:\.\d+)?$",
+
+        # BPI to BDO 100
+        r"(.+?)\s+to\s+(.+?)\s+\d+(?:,\d{3})*(?:\.\d+)?$",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+
+        from_text = clean_search_text(match.group(1))
+        to_text = clean_search_text(match.group(2))
+
+        from_account = find_account_by_text(user, from_text)
+        to_account = find_account_by_text(user, to_text)
+
+        return from_account, to_account
+
+    return None, None
+
+
+def find_best_account(user, text):
+    text = text.lower()
+
+    accounts = Account.objects.filter(
+        user=user,
+        is_active=True,
+    )
+
+    for account in accounts:
+        haystack = f"{account.name} {account.institution_name}".lower()
+        if account.name.lower() in text or any(word in haystack for word in text.split()):
+            return account
+
+    return accounts.exclude(
+        account_type__in=["credit_card", "loan"]
+    ).first()
+
+
+def find_expense_category(user, text):
+    text = text.lower()
+
+    categories = Category.objects.filter(
+        user=user,
+        is_active=True,
+        category_type="expense",
+    )
+
+    keyword_map = {
+        "groceries": [
+            "grocery", "groceries", "supermarket", "market",
+            "puregold", "sm", "savemore", "waltermart",
+            "landmark", "robinsons", "s&r", "snr",
+            "vegetable", "meat", "fish", "rice"
+        ],
+        "food": [
+            "jollibee", "mcdo", "mcdonald", "kfc", "chowking",
+            "restaurant", "dining", "meal", "lunch", "dinner",
+            "breakfast", "coffee", "starbucks"
+        ],
+        "utilities": [
+            "meralco", "electric", "water", "internet", "wifi", "bill"
+        ],
+        "transport": [
+            "grab", "taxi", "gas", "fuel", "fare"
+        ],
+        "entertainment": [
+            "netflix", "spotify", "game", "movie"
+        ],
+    }
+
+    # Exact/partial category name match first.
+    for category in categories:
+        category_name = category.name.lower()
+
+        if category_name in text:
+            return category
+
+    # Keyword-based category match.
+    for keyword, words in keyword_map.items():
+        if not any(word in text for word in words):
+            continue
+
+        for category in categories:
+            category_name = category.name.lower()
+
+            if keyword in category_name:
+                return category
+
+            if keyword == "groceries" and "grocery" in category_name:
+                return category
+
+            if keyword == "groceries" and "food" in category_name and "grocer" in category_name:
+                return category
+
+            if keyword == "food" and "dining" in category_name:
+                return category
+
+    return categories.first()
+
+
+def find_income_category(user, text):
+    text = text.lower()
+
+    categories = Category.objects.filter(
+        user=user,
+        is_active=True,
+        category_type="income",
+    )
+
+    for category in categories:
+        if category.name.lower() in text:
+            return category
+
+    salary_category = categories.filter(name__icontains="salary").first()
+    return salary_category or categories.first()
+
+
+def extract_account_from_text(user, text):
+    """
+    Detect account phrases like:
+    - pay from BPI
+    - from BPI
+    - using GCash
+    - via Cash Wallet
+    - paid with BPI
+    """
+    lowered = text.lower()
+
+    account_phrase_patterns = [
+        r"(?:pay\s+from|from|using|via|with|paid\s+with)\s+(.+)$",
+    ]
+
+    possible_account_text = ""
+
+    for pattern in account_phrase_patterns:
+        match = re.search(pattern, lowered)
+        if match:
+            possible_account_text = match.group(1).strip()
+            break
+
+    accounts = Account.objects.filter(
+        user=user,
+        is_active=True,
+    )
+
+    # If phrase found, prioritize matching that part only.
+    if possible_account_text:
+        possible_account_text = re.sub(
+            r"\d+(?:,\d{3})*(?:\.\d+)?",
+            "",
+            possible_account_text,
+        ).strip()
+
+        for account in accounts:
+            haystack = f"{account.name} {account.institution_name}".lower()
+
+            if possible_account_text in haystack:
+                return account
+
+            for word in possible_account_text.split():
+                if len(word) >= 2 and word in haystack:
+                    return account
+
+    # Fallback: look at the whole message.
+    for account in accounts:
+        haystack = f"{account.name} {account.institution_name}".lower()
+
+        if account.name.lower() in lowered:
+            return account
+
+        if account.institution_name and account.institution_name.lower() in lowered:
+            return account
+
+    return None
+
+
+def clean_expense_title(text, amount):
+    title = remove_amount_from_text(text, amount)
+
+    # Remove account instruction phrases from title.
+    title = re.sub(
+        r",?\s*(pay\s+from|from|using|via|with|paid\s+with)\s+.+$",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    )
+
+    # Clean extra commas/spaces.
+    title = title.strip(" ,.-")
+
+    return title
+
+
+def extract_destination_account_from_text(user, text):
+    lowered = text.lower()
+
+    patterns = [
+        r"(?:to|in|into|deposit\s+to|received\s+in)\s+(.+)$",
+    ]
+
+    possible_account_text = ""
+
+    for pattern in patterns:
+        match = re.search(pattern, lowered)
+        if match:
+            possible_account_text = match.group(1).strip()
+            break
+
+    accounts = Account.objects.filter(
+        user=user,
+        is_active=True,
+    )
+
+    if possible_account_text:
+        possible_account_text = re.sub(
+            r"\d+(?:,\d{3})*(?:\.\d+)?",
+            "",
+            possible_account_text,
+        ).strip()
+
+        for account in accounts:
+            haystack = f"{account.name} {account.institution_name}".lower()
+
+            if possible_account_text in haystack:
+                return account
+
+            for word in possible_account_text.split():
+                if len(word) >= 2 and word in haystack:
+                    return account
+
+    return None
+
+
+def clean_search_text(text):
+    text = text.lower()
+
+    # Remove punctuation that commonly comes from chat messages.
+    text = re.sub(r"[^\w\s]", " ", text)
+
+    # Collapse multiple spaces.
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+
+import random
+
+
+def lazy_reply(message):
+    prefixes = [
+        "Alright… ",
+        "Okay, okay… ",
+        "Fine, I checked… ",
+        "Hmm… ",
+        "Yup, found it… ",
+    ]
+
+    suffixes = [
+        " 😴",
+        " Lazy but done.",
+        " Not bad.",
+        " I’ll do the boring part.",
+        " Easy enough.",
+    ]
+
+    return f"{random.choice(prefixes)}{message}{random.choice(suffixes)}"
+
+
+def assistant_account_choices(user):
+    accounts = Account.objects.filter(
+        user=user,
+        is_active=True,
+    ).exclude(
+        account_type__in=["credit_card", "loan"]
+    ).order_by("account_type", "name")
+
+    return [
+        {
+            "id": account.id,
+            "name": account.name,
+            "type": account.account_type,
+            "balance": str(account.current_balance),
+        }
+        for account in accounts
+    ]
+
+
+def serialize_preview(preview):
+    data = {}
+
+    for key, value in preview.items():
+        if isinstance(value, Decimal):
+            data[key] = str(value)
+        elif hasattr(value, "id"):
+            data[key] = {
+                "id": value.id,
+                "name": getattr(value, "name", str(value)),
+            }
+        else:
+            data[key] = value
+
+    return data
+
+
+@login_required
+@require_POST
+def finance_assistant_view(request):
+    message = request.POST.get("message", "").strip()
+
+    if not message:
+        return JsonResponse({
+            "ok": False,
+            "reply": "Please type something like `jollibee 500` or `pay meralco bill`.",
+        })
+
+    text = message.lower()
+    amount = extract_amount(text)
+
+    # Pay bill intent
+    if "pay" in text and "bill" in text:
+        search_text = text.replace("pay", "").replace("bill", "")
+        search_text = clean_search_text(search_text)
+
+        bill_queryset = Bill.objects.filter(
+            user=request.user,
+            status__in=["unpaid", "partial", "overdue"],
+        ).select_related("account", "category")
+
+        bill = bill_queryset.filter(
+            Q(name__icontains=search_text) |
+            Q(category__name__icontains=search_text)
+        ).order_by("due_date").first()
+
+        # Fallback: match any word, useful for messages like "pay my meralco electric bill"
+        if not bill and search_text:
+            words = [word for word in search_text.split() if len(word) >= 3]
+
+            query = Q()
+            for word in words:
+                query |= Q(name__icontains=word)
+                query |= Q(category__name__icontains=word)
+
+            bill = bill_queryset.filter(query).order_by("due_date").first()
+
+        if not bill.account_id:
+            choices = assistant_account_choices(request.user)
+
+            if not choices:
+                return JsonResponse({
+                    "ok": False,
+                    "reply": "Please create an account first.",
+                })
+
+            amount_to_pay = bill.amount_due - bill.amount_paid
+
+            request.session["finance_assistant_preview"] = {
+                "intent": "pay_bill",
+                "bill_id": bill.id,
+                "bill_name": bill.name,
+                "amount": str(amount_to_pay),
+                "needs_account": True,
+            }
+
+            return JsonResponse({
+                "ok": True,
+                "needs_choice": True,
+                "choice_type": "account",
+                "choices": choices,
+                "reply": f"I found `{bill.name}` for ₱{amount_to_pay:,.2f}. Which account should pay it?",
+            })
+
+        if not bill.category_id:
+            return JsonResponse({
+                "ok": False,
+                "reply": f"I found `{bill.name}`, but it has no category assigned. Please edit the bill first.",
+            })
+
+        amount_to_pay = bill.amount_due - bill.amount_paid
+
+        preview = {
+            "intent": "pay_bill",
+            "bill_id": bill.id,
+            "bill_name": bill.name,
+            "account_name": bill.account.name,
+            "category_name": bill.category.name,
+            "amount": amount_to_pay,
+            "reply": (
+                f"I found unpaid bill `{bill.name}` for ₱{amount_to_pay:,.2f}. "
+                f"Pay from {bill.account.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
+    if " to " in text and amount:
+        from_account, to_account = parse_transfer_command(
+            request.user,
+            message,
+            amount,
+        )
+
+        if from_account and to_account:
+            preview = {
+                "intent": "transfer",
+                "from_account_id": from_account.id,
+                "from_account_name": from_account.name,
+                "to_account_id": to_account.id,
+                "to_account_name": to_account.name,
+                "amount": amount,
+                "reply": (
+                    f"Transfer ₱{amount:,.2f} from {from_account.name} "
+                    f"to {to_account.name}?"
+                ),
+            }
+
+            request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+            return JsonResponse({
+                "ok": True,
+                "needs_confirmation": True,
+                "preview": serialize_preview(preview),
+                "reply": lazy_reply(preview["reply"]),
+            })
+
+        if "transfer" in text or "send" in text or "move" in text or " from " in text:
+            return JsonResponse({
+                "ok": False,
+                "reply": "I couldn't clearly find the source or destination account.",
+            })
+
+        preview = {
+            "intent": "transfer",
+            "from_account_id": from_account.id,
+            "from_account_name": from_account.name,
+            "to_account_id": to_account.id,
+            "to_account_name": to_account.name,
+            "amount": amount,
+            "reply": (
+                f"Transfer ₱{amount:,.2f} from {from_account.name} "
+                f"to {to_account.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
+    # Income intent
+    income_keywords = ["salary", "income", "received", "bonus", "allowance"]
+    if amount and any(keyword in text for keyword in income_keywords):
+        title = remove_amount_from_text(message, amount)
+        account = extract_destination_account_from_text(request.user, message)
+        if not account:
+            account = extract_account_from_text(request.user, message)
+        if not account:
+            account = find_best_account(request.user, text)
+        category = find_income_category(request.user, text)
+
+        if not account:
+            return JsonResponse({
+                "ok": False,
+                "reply": "Please create an account first.",
+            })
+
+        if not category:
+            return JsonResponse({
+                "ok": False,
+                "reply": "Please create an income category first.",
+            })
+
+        preview = {
+            "intent": "income",
+            "title": title or "Income",
+            "amount": amount,
+            "account_id": account.id,
+            "account_name": account.name,
+            "category_id": category.id,
+            "category_name": category.name,
+            "reply": (
+                f"Add income `{title or 'Income'}` for ₱{amount:,.2f} "
+                f"to {account.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
+    # Default expense intent:
+    # Examples:
+    # "jollibee 500"
+    # "jollibee 500, pay from BPI"
+    # "jollibee 500 using GCash"
+    if amount:
+        title = clean_expense_title(message, amount)
+
+        account = extract_account_from_text(request.user, message)
+
+        category = find_expense_category(request.user, text)
+
+        if not account:
+            choices = assistant_account_choices(request.user)
+
+            if not choices:
+                return JsonResponse({
+                    "ok": False,
+                    "reply": "Please create an account first.",
+                })
+
+            pending = {
+                "intent": "expense",
+                "title": title or "Expense",
+                "amount": str(amount),
+                "category_id": category.id if category else None,
+                "category_name": category.name if category else None,
+                "needs_account": True,
+            }
+
+            request.session["finance_assistant_preview"] = pending
+
+            return JsonResponse({
+                "ok": True,
+                "needs_choice": True,
+                "choice_type": "account",
+                "choices": choices,
+                "reply": lazy_reply(
+                    f"Which account should I use for `{title or 'Expense'}` ₱{amount:,.2f}?"
+                ),
+            })
+
+        if not category:
+            return JsonResponse({
+                "ok": False,
+                "reply": "Please create an expense category first.",
+            })
+
+        preview = {
+            "intent": "expense",
+            "title": title or "Expense",
+            "amount": amount,
+            "account_id": account.id,
+            "account_name": account.name,
+            "category_id": category.id,
+            "category_name": category.name,
+            "reply": (
+                f"Add expense `{title or 'Expense'}` for ₱{amount:,.2f} "
+                f"from {account.name} under {category.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
+    return JsonResponse({
+        "ok": False,
+        "reply": "I didn't understand that yet. Try `jollibee 500`, `salary 10000`, or `pay meralco bill`.",
+    })
+
+
+@login_required
+@require_POST
+@db_transaction.atomic
+def finance_assistant_confirm_view(request):
+    preview = request.session.get("finance_assistant_preview")
+
+    if not preview:
+        return JsonResponse({
+            "ok": False,
+            "reply": "There is no pending action to confirm.",
+        })
+
+    intent = preview.get("intent")
+
+    try:
+        if intent == "expense":
+            account = Account.objects.get(
+                id=preview["account_id"],
+                user=request.user,
+            )
+            category = Category.objects.get(
+                id=preview["category_id"],
+                user=request.user,
+            )
+
+            transaction_obj = Transaction.objects.create(
+                user=request.user,
+                account=account,
+                category=category,
+                transaction_type="expense",
+                title=preview["title"],
+                amount=Decimal(preview["amount"]),
+                transaction_date=timezone.localdate(),
+                notes="Added via finance assistant",
+            )
+
+            apply_transaction_balance_effect(transaction_obj)
+
+            reply = lazy_reply(
+                f"Done. Added expense `{transaction_obj.title}` for ₱{transaction_obj.amount:,.2f}."
+            )
+
+        elif intent == "income":
+            account = Account.objects.get(
+                id=preview["account_id"],
+                user=request.user,
+            )
+            category = Category.objects.get(
+                id=preview["category_id"],
+                user=request.user,
+            )
+
+            transaction_obj = Transaction.objects.create(
+                user=request.user,
+                account=account,
+                category=category,
+                transaction_type="income",
+                title=preview["title"],
+                amount=Decimal(preview["amount"]),
+                transaction_date=timezone.localdate(),
+                notes="Added via finance assistant",
+            )
+
+            apply_transaction_balance_effect(transaction_obj)
+
+            reply = lazy_reply(
+                f"Done. Added income `{transaction_obj.title}` for ₱{transaction_obj.amount:,.2f}."
+            )
+
+        elif intent == "pay_bill":
+            bill = Bill.objects.select_related("account", "category").get(
+                id=preview["bill_id"],
+                user=request.user,
+            )
+
+            if bill.status == "paid":
+                return JsonResponse({
+                    "ok": False,
+                    "reply": "This bill is already paid.",
+                })
+
+            amount_to_pay = bill.amount_due - bill.amount_paid
+
+            payment_account = bill.account
+
+            if preview.get("account_id"):
+                payment_account = Account.objects.get(
+                    id=preview["account_id"],
+                    user=request.user,
+                    is_active=True,
+                )
+
+            payment_transaction = Transaction.objects.create(
+                user=request.user,
+                account=payment_account,
+                category=bill.category,
+                transaction_type="expense",
+                title=bill.name,
+                amount=amount_to_pay,
+                transaction_date=timezone.localdate(),
+                notes=f"Payment for bill #{bill.id}: {bill.name}",
+            )
+
+            apply_transaction_balance_effect(payment_transaction)
+
+            bill.amount_paid = bill.amount_due
+            bill.status = "paid"
+            bill.paid_date = timezone.localdate()
+            bill.payment_transaction = payment_transaction
+            bill.save(update_fields=[
+                "amount_paid",
+                "status",
+                "paid_date",
+                "payment_transaction",
+            ])
+
+            reply = lazy_reply(
+                f"Done. Paid bill `{bill.name}` for ₱{amount_to_pay:,.2f}."
+            )
+
+        elif intent == "transfer":
+            from_account = Account.objects.get(
+                id=preview["from_account_id"],
+                user=request.user,
+            )
+            to_account = Account.objects.get(
+                id=preview["to_account_id"],
+                user=request.user,
+            )
+
+            transfer_obj = Transfer.objects.create(
+                user=request.user,
+                from_account=from_account,
+                to_account=to_account,
+                amount=Decimal(preview["amount"]),
+                transfer_date=timezone.localdate(),
+                notes="Added via finance assistant",
+            )
+
+            apply_transfer_balance_effect(transfer_obj)
+
+            reply = (
+                f"Done. Transferred ₱{transfer_obj.amount:,.2f} "
+                f"from {from_account.name} to {to_account.name}."
+            )
+
+        else:
+            return JsonResponse({
+                "ok": False,
+                "reply": "Unknown pending action.",
+            })
+
+    except Exception as error:
+        return JsonResponse({
+            "ok": False,
+            "reply": str(error),
+        })
+
+    request.session.pop("finance_assistant_preview", None)
+
+    return JsonResponse({
+        "ok": True,
+        "reply": reply,
+    })
+
+
+@login_required
+@require_POST
+def finance_assistant_choose_view(request):
+    preview = request.session.get("finance_assistant_preview")
+
+    if not preview:
+        return JsonResponse({
+            "ok": False,
+            "reply": "There is no pending action.",
+        })
+
+    choice_type = request.POST.get("choice_type")
+    choice_id = request.POST.get("choice_id")
+
+    if choice_type != "account":
+        return JsonResponse({
+            "ok": False,
+            "reply": "Unsupported choice.",
+        })
+
+    account = get_object_or_404(
+        Account,
+        id=choice_id,
+        user=request.user,
+        is_active=True,
+    )
+
+    intent = preview.get("intent")
+
+    if intent == "expense":
+        category = None
+
+        if preview.get("category_id"):
+            category = Category.objects.filter(
+                id=preview["category_id"],
+                user=request.user,
+            ).first()
+
+        if not category:
+            return JsonResponse({
+                "ok": False,
+                "reply": "Please create an expense category first.",
+            })
+
+        preview["account_id"] = account.id
+        preview["account_name"] = account.name
+        preview["needs_account"] = False
+        preview["reply"] = (
+            f"Add expense `{preview['title']}` for ₱{Decimal(preview['amount']):,.2f} "
+            f"from {account.name} under {category.name}?"
+        )
+
+    elif intent == "pay_bill":
+        bill = get_object_or_404(
+            Bill.objects.select_related("category"),
+            id=preview["bill_id"],
+            user=request.user,
+        )
+
+        if not bill.category_id:
+            return JsonResponse({
+                "ok": False,
+                "reply": f"I found `{bill.name}`, but it has no category assigned. Please edit the bill first.",
+            })
+
+        preview["account_id"] = account.id
+        preview["account_name"] = account.name
+        preview["category_id"] = bill.category_id
+        preview["category_name"] = bill.category.name
+        preview["needs_account"] = False
+        preview["reply"] = (
+            f"Pay bill `{bill.name}` for ₱{Decimal(preview['amount']):,.2f} "
+            f"from {account.name}?"
+        )
+
+    else:
+        return JsonResponse({
+            "ok": False,
+            "reply": "This pending action does not support account choices.",
+        })
+
+    request.session["finance_assistant_preview"] = preview
+
+    return JsonResponse({
+        "ok": True,
+        "needs_confirmation": True,
+        "reply": lazy_reply(preview["reply"]),
+    })

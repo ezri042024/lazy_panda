@@ -83,4 +83,11 @@ urlpatterns = [
     path("budgets/<int:pk>/delete/", views.budget_delete_view, name="finance_web_budget_delete"),
 
     path("reports/", views.reports_view, name="finance_web_reports"),
+    path("assistant/", views.finance_assistant_view, name="finance_web_assistant"),
+    path("assistant/confirm/", views.finance_assistant_confirm_view, name="finance_web_assistant_confirm"),
+    path(
+        "assistant/choose/",
+        views.finance_assistant_choose_view,
+        name="finance_web_assistant_choose",
+    ),
 ]
