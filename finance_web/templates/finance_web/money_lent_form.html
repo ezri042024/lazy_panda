@@ -1,0 +1,158 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}
+    {% if mode == "edit" %}Edit Money Lent{% else %}Add Money Lent{% endif %} | Lazy Panda Finance
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-helper-card {
+        background: #f8f7f4;
+        border-radius: 24px;
+        padding: 1rem;
+    }
+
+    .form-helper-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: rgba(254, 117, 3, .10);
+        color: #FE7503;
+        font-size: 1.15rem;
+        flex: 0 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">
+            {% if mode == "edit" %}
+                Edit Money Lent
+            {% else %}
+                Add Money Lent
+            {% endif %}
+        </h1>
+        <p class="text-muted fw-semibold mb-0">
+            Record money someone borrowed from you
+        </p>
+    </div>
+
+    <a href="{% url 'finance_web_money_lent' %}" class="btn btn-light fw-bold rounded-4">
+        <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="app-card p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger rounded-4 fw-semibold">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Borrower</label>
+                        {{ form.borrower_name }}
+                        <div class="text-danger small fw-semibold">{{ form.borrower_name.errors }}</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Account Used</label>
+                        {{ form.account }}
+                        <div class="text-danger small fw-semibold">{{ form.account.errors }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Amount Lent</label>
+                        {{ form.original_amount }}
+                        <div class="text-danger small fw-semibold">{{ form.original_amount.errors }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Lent Date</label>
+                        {{ form.lent_date }}
+                        <div class="text-danger small fw-semibold">{{ form.lent_date.errors }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Expected Payment Date</label>
+                        {{ form.expected_payment_date }}
+                        <div class="text-danger small fw-semibold">{{ form.expected_payment_date.errors }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Status</label>
+                        {{ form.status }}
+                        <div class="text-danger small fw-semibold">{{ form.status.errors }}</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Notes</label>
+                        {{ form.notes }}
+                        <div class="text-danger small fw-semibold">{{ form.notes.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+                    <a href="{% url 'finance_web_money_lent' %}" class="btn btn-light fw-bold rounded-4">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="btn btn-accent">
+                        <i class="bi bi-check2-circle me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="app-card p-4">
+            <div class="form-helper-card">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="form-helper-icon">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">How this works</div>
+                        <div class="text-muted small fw-semibold">Lazy explanation, but useful.</div>
+                    </div>
+                </div>
+
+                <div class="vstack gap-3">
+                    <div>
+                        <div class="fw-bold small">When you add money lent</div>
+                        <div class="text-muted small fw-semibold">
+                            The selected account balance decreases.
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="fw-bold small">It is not an expense</div>
+                        <div class="text-muted small fw-semibold">
+                            It becomes a receivable because someone should pay you back.
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="fw-bold small">When they pay</div>
+                        <div class="text-muted small fw-semibold">
+                            Your receiving account increases and the receivable balance goes down.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

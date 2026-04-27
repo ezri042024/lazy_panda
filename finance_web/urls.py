@@ -90,4 +90,30 @@ urlpatterns = [
         views.finance_assistant_choose_view,
         name="finance_web_assistant_choose",
     ),
+
+    path("money-lent/", views.money_lent_view, name="finance_web_money_lent"),
+    path("money-lent/add/", views.money_lent_create_view, name="finance_web_money_lent_create"),
+    path("money-lent/<int:pk>/edit/", views.money_lent_edit_view, name="finance_web_money_lent_edit"),
+    path("money-lent/<int:pk>/delete/", views.money_lent_delete_view, name="finance_web_money_lent_delete"),
+    path(
+        "assistant/receipt/",
+        views.finance_assistant_receipt_view,
+        name="finance_web_assistant_receipt",
+    ),
+
+    path(
+        "money-lent-payments/add/",
+        views.money_lent_payment_create_view,
+        name="finance_web_money_lent_payment_create",
+    ),
+    path(
+        "money-lent-payments/<int:pk>/edit/",
+        views.money_lent_payment_edit_view,
+        name="finance_web_money_lent_payment_edit",
+    ),
+    path(
+        "money-lent-payments/<int:pk>/delete/",
+        views.money_lent_payment_delete_view,
+        name="finance_web_money_lent_payment_delete",
+    ),
 ]

@@ -12,15 +12,15 @@ from django.views.decorators.http import require_POST
 
 from finance.defaults import create_default_finance_setup
 from finance.models import Account, Transaction, Bill, Debt, SavingsGoal, Budget, Category, RecurringBill, Transfer, \
-    DebtPayment, GoalContribution
+    DebtPayment, GoalContribution, MoneyLent, MoneyLentPayment
 from finance.services import decrease_account_balance, increase_account_balance, generate_recurring_bills_for_user, \
     increase_debt_balance, decrease_debt_balance, decrease_goal_amount, increase_goal_amount
 from finance.views import BillViewSet
-from .ai import generate_report_ai_summary
+from .ai import generate_report_ai_summary, analyze_receipt_image_with_openai
 
 from .forms import WebLoginForm, WebRegisterForm, AccountWebForm, TransactionWebForm, RecurringBillWebForm, BillWebForm, \
     TransferWebForm, DebtPaymentWebForm, DebtWebForm, SavingsGoalWebForm, GoalContributionWebForm, CategoryWebForm, \
-    BudgetWebForm
+    BudgetWebForm, MoneyLentWebForm, MoneyLentPaymentWebForm
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -638,6 +638,8 @@ def bill_mark_paid_view(request, pk):
             messages.error(request, "This bill has no remaining amount to pay.")
             return redirect("finance_web_bills")
 
+        payment_account = bill.account
+
         payment_transaction = Transaction.objects.create(
             user=request.user,
             account=payment_account,
@@ -1232,6 +1234,384 @@ def debt_payment_delete_view(request, pk):
 
     messages.success(request, "Debt payment deleted and balances restored.")
     return redirect("finance_web_debts")
+
+
+def update_money_lent_status(money_lent):
+    if money_lent.current_balance <= 0:
+        money_lent.current_balance = 0
+        money_lent.status = "paid"
+    elif money_lent.current_balance < money_lent.original_amount:
+        money_lent.status = "partial"
+    else:
+        money_lent.status = "active"
+
+    money_lent.save(update_fields=["current_balance", "status"])
+
+
+def increase_money_lent_balance(money_lent_id, amount):
+    money_lent = MoneyLent.objects.select_for_update().get(id=money_lent_id)
+    money_lent.current_balance += amount
+    update_money_lent_status(money_lent)
+
+
+def decrease_money_lent_balance(money_lent_id, amount):
+    money_lent = MoneyLent.objects.select_for_update().get(id=money_lent_id)
+
+    if money_lent.current_balance - amount < 0:
+        raise DjangoValidationError("Payment cannot exceed remaining balance.")
+
+    money_lent.current_balance -= amount
+    update_money_lent_status(money_lent)
+
+
+@login_required
+def money_lent_view(request):
+    money_lent_records = MoneyLent.objects.filter(
+        user=request.user,
+    ).select_related("account").order_by("-lent_date", "-created_at")
+
+    active_records = money_lent_records.filter(
+        status__in=["active", "partial"]
+    )
+
+    total_lent = money_lent_records.aggregate(
+        total=Sum("original_amount")
+    )["total"] or 0
+
+    total_receivable = active_records.aggregate(
+        total=Sum("current_balance")
+    )["total"] or 0
+
+    paid_count = money_lent_records.filter(status="paid").count()
+
+    payments = MoneyLentPayment.objects.filter(
+        user=request.user,
+    ).select_related(
+        "money_lent",
+        "account",
+    ).order_by("-payment_date", "-created_at")[:10]
+
+    context = {
+        "money_lent_records": money_lent_records,
+        "payments": payments,
+        "total_lent": total_lent,
+        "total_receivable": total_receivable,
+        "active_count": active_records.count(),
+        "paid_count": paid_count,
+    }
+
+    return render(request, "finance_web/money_lent.html", context)
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_create_view(request):
+    initial = {
+        "lent_date": timezone.localdate(),
+    }
+
+    form = MoneyLentWebForm(
+        request.POST or None,
+        user=request.user,
+        initial=initial,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        money_lent = form.save(commit=False)
+        money_lent.user = request.user
+        money_lent.current_balance = money_lent.original_amount
+
+        try:
+            if money_lent.account_id:
+                decrease_account_balance(
+                    money_lent.account_id,
+                    money_lent.original_amount,
+                )
+
+            money_lent.save()
+
+        except Exception as error:
+            form.add_error(None, str(error))
+        else:
+            messages.success(request, "Money lent recorded successfully.")
+            return redirect("finance_web_money_lent")
+
+    return render(request, "finance_web/money_lent_form.html", {
+        "form": form,
+        "mode": "create",
+    })
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_edit_view(request, pk):
+    money_lent = get_object_or_404(
+        MoneyLent.objects.select_related("account"),
+        pk=pk,
+        user=request.user,
+    )
+
+    form = MoneyLentWebForm(
+        request.POST or None,
+        instance=money_lent,
+        user=request.user,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        old_money_lent = MoneyLent.objects.select_related("account").get(
+            pk=money_lent.pk,
+            user=request.user,
+        )
+
+        old_account_id = old_money_lent.account_id
+        old_original_amount = old_money_lent.original_amount
+
+        total_payments = old_money_lent.payments.aggregate(
+            total=Sum("amount")
+        )["total"] or 0
+
+        try:
+            # Reverse old lend effect.
+            if old_account_id:
+                increase_account_balance(old_account_id, old_original_amount)
+
+            updated_money_lent = form.save(commit=False)
+            updated_money_lent.user = request.user
+            updated_money_lent.current_balance = (
+                updated_money_lent.original_amount - total_payments
+            )
+
+            if updated_money_lent.current_balance < 0:
+                raise DjangoValidationError(
+                    "Original amount cannot be lower than total payments."
+                )
+
+            # Apply new lend effect.
+            if updated_money_lent.account_id:
+                decrease_account_balance(
+                    updated_money_lent.account_id,
+                    updated_money_lent.original_amount,
+                )
+
+            updated_money_lent.save()
+            update_money_lent_status(updated_money_lent)
+
+        except Exception as error:
+            # Restore old effect if edit fails.
+            if old_account_id:
+                decrease_account_balance(old_account_id, old_original_amount)
+
+            form.add_error(None, str(error))
+        else:
+            messages.success(request, "Money lent updated successfully.")
+            return redirect("finance_web_money_lent")
+
+    return render(request, "finance_web/money_lent_form.html", {
+        "form": form,
+        "mode": "edit",
+        "money_lent": money_lent,
+    })
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_delete_view(request, pk):
+    money_lent = get_object_or_404(
+        MoneyLent.objects.select_related("account"),
+        pk=pk,
+        user=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect("finance_web_money_lent")
+
+    try:
+        # Reverse all received payments first.
+        payments = MoneyLentPayment.objects.filter(
+            money_lent=money_lent,
+            user=request.user,
+        ).select_related("account")
+
+        for payment in payments:
+            if payment.account_id:
+                decrease_account_balance(payment.account_id, payment.amount)
+
+        # Reverse original money lent.
+        if money_lent.account_id:
+            increase_account_balance(
+                money_lent.account_id,
+                money_lent.original_amount,
+            )
+
+        money_lent.delete()
+
+    except Exception as error:
+        messages.error(request, str(error))
+        return redirect("finance_web_money_lent")
+
+    messages.success(request, "Money lent record deleted and balances restored.")
+    return redirect("finance_web_money_lent")
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_payment_create_view(request):
+    money_lent_id = request.GET.get("money_lent")
+    money_lent = None
+
+    if money_lent_id:
+        money_lent = get_object_or_404(
+            MoneyLent,
+            pk=money_lent_id,
+            user=request.user,
+        )
+
+    initial = {
+        "payment_date": timezone.localdate(),
+    }
+
+    form = MoneyLentPaymentWebForm(
+        request.POST or None,
+        user=request.user,
+        money_lent=money_lent,
+        initial=initial,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        payment = form.save(commit=False)
+        payment.user = request.user
+
+        try:
+            if payment.account_id:
+                increase_account_balance(payment.account_id, payment.amount)
+
+            decrease_money_lent_balance(
+                payment.money_lent_id,
+                payment.amount,
+            )
+
+            payment.save()
+
+        except Exception as error:
+            form.add_error(None, str(error))
+        else:
+            messages.success(request, "Money lent payment recorded successfully.")
+            return redirect("finance_web_money_lent")
+
+    return render(request, "finance_web/money_lent_payment_form.html", {
+        "form": form,
+        "mode": "create",
+    })
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_payment_edit_view(request, pk):
+    payment = get_object_or_404(
+        MoneyLentPayment.objects.select_related("money_lent", "account"),
+        pk=pk,
+        user=request.user,
+    )
+
+    form = MoneyLentPaymentWebForm(
+        request.POST or None,
+        instance=payment,
+        user=request.user,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        old_payment = MoneyLentPayment.objects.select_related(
+            "money_lent",
+            "account",
+        ).get(
+            pk=payment.pk,
+            user=request.user,
+        )
+
+        try:
+            # Reverse old payment effect.
+            if old_payment.account_id:
+                decrease_account_balance(
+                    old_payment.account_id,
+                    old_payment.amount,
+                )
+
+            increase_money_lent_balance(
+                old_payment.money_lent_id,
+                old_payment.amount,
+            )
+
+            # Apply updated payment effect.
+            updated_payment = form.save(commit=False)
+            updated_payment.user = request.user
+
+            if updated_payment.account_id:
+                increase_account_balance(
+                    updated_payment.account_id,
+                    updated_payment.amount,
+                )
+
+            decrease_money_lent_balance(
+                updated_payment.money_lent_id,
+                updated_payment.amount,
+            )
+
+            updated_payment.save()
+
+        except Exception as error:
+            # Restore old effect if edit fails.
+            if old_payment.account_id:
+                increase_account_balance(
+                    old_payment.account_id,
+                    old_payment.amount,
+                )
+
+            decrease_money_lent_balance(
+                old_payment.money_lent_id,
+                old_payment.amount,
+            )
+
+            form.add_error(None, str(error))
+        else:
+            messages.success(request, "Money lent payment updated successfully.")
+            return redirect("finance_web_money_lent")
+
+    return render(request, "finance_web/money_lent_payment_form.html", {
+        "form": form,
+        "mode": "edit",
+        "payment": payment,
+    })
+
+
+@login_required
+@db_transaction.atomic
+def money_lent_payment_delete_view(request, pk):
+    payment = get_object_or_404(
+        MoneyLentPayment.objects.select_related("money_lent", "account"),
+        pk=pk,
+        user=request.user,
+    )
+
+    if request.method != "POST":
+        return redirect("finance_web_money_lent")
+
+    try:
+        if payment.account_id:
+            decrease_account_balance(payment.account_id, payment.amount)
+
+        increase_money_lent_balance(
+            payment.money_lent_id,
+            payment.amount,
+        )
+
+        payment.delete()
+
+    except Exception as error:
+        messages.error(request, str(error))
+        return redirect("finance_web_money_lent")
+
+    messages.success(request, "Money lent payment deleted and balances restored.")
+    return redirect("finance_web_money_lent")
 
 
 @login_required
@@ -2345,6 +2725,86 @@ def serialize_preview(preview):
 
 @login_required
 @require_POST
+def finance_assistant_receipt_view(request):
+    uploaded_file = request.FILES.get("receipt")
+
+    if not uploaded_file:
+        return JsonResponse({
+            "ok": False,
+            "reply": lazy_reply("I did not receive an image. Upload it again, slowly this time."),
+        })
+
+    max_size = 8 * 1024 * 1024
+
+    if uploaded_file.size > max_size:
+        return JsonResponse({
+            "ok": False,
+            "reply": lazy_reply("That image is too large. Keep it under 8MB, please. I am lazy."),
+        })
+
+    try:
+        receipt_data = analyze_receipt_image_with_openai(uploaded_file)
+    except Exception as error:
+        return JsonResponse({
+            "ok": False,
+            "reply": lazy_reply(str(error)),
+        })
+
+    merchant = receipt_data["merchant"]
+    amount = receipt_data["amount"]
+    category_hint = receipt_data.get("category_hint") or ""
+    transaction_date = receipt_data.get("transaction_date") or ""
+    notes = receipt_data.get("notes") or ""
+
+    category_search_text = f"{merchant} {category_hint} {notes}"
+    category = find_expense_category(request.user, category_search_text)
+
+    if not category:
+        return JsonResponse({
+            "ok": False,
+            "reply": lazy_reply("I read the receipt, but you need to create an expense category first."),
+        })
+
+    choices = assistant_account_choices(request.user)
+
+    if not choices:
+        return JsonResponse({
+            "ok": False,
+            "reply": lazy_reply("Please create an account first."),
+        })
+
+    receipt_note_parts = ["Added from receipt upload via finance assistant"]
+
+    if transaction_date:
+        receipt_note_parts.append(f"Receipt date: {transaction_date}")
+
+    if notes:
+        receipt_note_parts.append(notes)
+
+    request.session["finance_assistant_preview"] = {
+        "intent": "expense",
+        "title": merchant,
+        "amount": str(amount),
+        "category_id": category.id,
+        "category_name": category.name,
+        "needs_account": True,
+        "notes": " | ".join(receipt_note_parts),
+    }
+
+    return JsonResponse({
+        "ok": True,
+        "needs_choice": True,
+        "choice_type": "account",
+        "choices": choices,
+        "reply": lazy_reply(
+            f"I read the receipt as `{merchant}` for ₱{amount:,.2f} under {category.name}. "
+            f"Which account should I use?"
+        ),
+    })
+
+
+@login_required
+@require_POST
 def finance_assistant_view(request):
     message = request.POST.get("message", "").strip()
 
@@ -2654,7 +3114,7 @@ def finance_assistant_confirm_view(request):
                 title=preview["title"],
                 amount=Decimal(preview["amount"]),
                 transaction_date=timezone.localdate(),
-                notes="Added via finance assistant",
+                notes=preview.get("notes") or "Added via finance assistant",
             )
 
             apply_transaction_balance_effect(transaction_obj)

@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm
 
 from finance.models import Category, Account, Transaction, RecurringBill, Bill, Transfer, Debt, DebtPayment, \
-    SavingsGoal, GoalContribution, Budget
+    SavingsGoal, GoalContribution, Budget, MoneyLent, MoneyLentPayment
 
 
 class WebLoginForm(AuthenticationForm):
@@ -459,6 +459,156 @@ class DebtPaymentWebForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Principal payment cannot exceed the current debt balance."
             )
+
+        return cleaned_data
+
+
+class MoneyLentWebForm(forms.ModelForm):
+    class Meta:
+        model = MoneyLent
+        fields = [
+            "account",
+            "borrower_name",
+            "original_amount",
+            "lent_date",
+            "expected_payment_date",
+            "status",
+            "notes",
+        ]
+        widgets = {
+            "account": forms.Select(attrs={"class": "form-select"}),
+            "borrower_name": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Example: Juan",
+            }),
+            "original_amount": forms.NumberInput(attrs={
+                "class": "form-control",
+                "step": "0.01",
+            }),
+            "lent_date": forms.DateInput(attrs={
+                "class": "form-control",
+                "type": "date",
+            }),
+            "expected_payment_date": forms.DateInput(attrs={
+                "class": "form-control",
+                "type": "date",
+            }),
+            "status": forms.Select(attrs={"class": "form-select"}),
+            "notes": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 3,
+            }),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        if user:
+            self.fields["account"].queryset = Account.objects.filter(
+                user=user,
+                is_active=True,
+            ).exclude(
+                account_type__in=["credit_card", "loan"]
+            ).order_by("account_type", "name")
+
+    def clean_original_amount(self):
+        amount = self.cleaned_data["original_amount"]
+
+        if amount <= 0:
+            raise forms.ValidationError("Amount must be greater than zero.")
+
+        return amount
+
+    def clean_account(self):
+        account = self.cleaned_data.get("account")
+
+        if account and self.user and account.user_id != self.user.id:
+            raise forms.ValidationError("Invalid account.")
+
+        return account
+
+
+class MoneyLentPaymentWebForm(forms.ModelForm):
+    class Meta:
+        model = MoneyLentPayment
+        fields = [
+            "money_lent",
+            "account",
+            "amount",
+            "payment_date",
+            "notes",
+        ]
+        widgets = {
+            "money_lent": forms.Select(attrs={"class": "form-select"}),
+            "account": forms.Select(attrs={"class": "form-select"}),
+            "amount": forms.NumberInput(attrs={
+                "class": "form-control",
+                "step": "0.01",
+            }),
+            "payment_date": forms.DateInput(attrs={
+                "class": "form-control",
+                "type": "date",
+            }),
+            "notes": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 3,
+            }),
+        }
+
+    def __init__(self, *args, user=None, money_lent=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        if user:
+            self.fields["money_lent"].queryset = MoneyLent.objects.filter(
+                user=user,
+                status__in=["active", "partial"],
+            ).order_by("borrower_name")
+
+            self.fields["account"].queryset = Account.objects.filter(
+                user=user,
+                is_active=True,
+            ).exclude(
+                account_type__in=["credit_card", "loan"]
+            ).order_by("account_type", "name")
+
+        if money_lent:
+            self.fields["money_lent"].initial = money_lent
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+
+        if amount <= 0:
+            raise forms.ValidationError("Payment amount must be greater than zero.")
+
+        return amount
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        money_lent = cleaned_data.get("money_lent")
+        amount = cleaned_data.get("amount")
+
+        if self.user:
+            account = cleaned_data.get("account")
+
+            if money_lent and money_lent.user_id != self.user.id:
+                raise forms.ValidationError("Invalid money lent record.")
+
+            if account and account.user_id != self.user.id:
+                raise forms.ValidationError("Invalid account.")
+
+        if money_lent and amount:
+            available_balance = money_lent.current_balance
+
+            if self.instance.pk:
+                available_balance += self.instance.amount
+
+            if amount > available_balance:
+                raise forms.ValidationError(
+                    "Payment cannot exceed the remaining balance."
+                )
 
         return cleaned_data
 

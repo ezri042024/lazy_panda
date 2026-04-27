@@ -1,0 +1,335 @@
+{% extends "finance_web/base.html" %}
+{% load humanize %}
+
+{% block title %}Money Lent | Lazy Panda Finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .money-lent-icon-wrap {
+        width: 50px;
+        height: 50px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        background: rgba(254, 117, 3, .10);
+        color: #FE7503;
+        font-size: 1.15rem;
+    }
+
+    .money-lent-icon-wrap.paid {
+        background: rgba(79, 139, 91, .12);
+        color: #4F8B5B;
+    }
+
+    .money-lent-icon-wrap.partial {
+        background: rgba(255, 193, 7, .16);
+        color: #b98500;
+    }
+
+    .money-lent-icon-wrap.danger {
+        background: rgba(255, 91, 91, .12);
+        color: #ff5b5b;
+    }
+
+    .money-lent-row {
+        background: #f8f7f4;
+        transition: .18s ease;
+    }
+
+    .money-lent-row:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .045);
+    }
+
+    .money-lent-action-form {
+        display: inline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">Money Lent</h1>
+        <p class="text-muted fw-semibold mb-0">Track friends, family, or anyone who borrowed money from you</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'finance_web_money_lent_payment_create' %}" class="btn btn-light fw-bold rounded-4">
+            <i class="bi bi-cash-coin me-1"></i> Add Payment
+        </a>
+
+        <a href="{% url 'finance_web_money_lent_create' %}" class="btn btn-accent">
+            <i class="bi bi-plus-lg me-1"></i> Add Money Lent
+        </a>
+    </div>
+</div>
+
+<div class="hero-card mb-4">
+    <div class="text-white-50 fw-bold mb-2">Total Receivable</div>
+    <div class="display-5 fw-bold text-money mb-4">
+        ₱{{ total_receivable|floatformat:2|intcomma }}
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                <div class="text-white-50 fw-semibold small">Total Lent</div>
+                <div class="fw-bold fs-5">₱{{ total_lent|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                <div class="text-white-50 fw-semibold small">Active Records</div>
+                <div class="fw-bold fs-5">{{ active_count }}</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="p-3 rounded-4" style="background:rgba(255,255,255,.08);">
+                <div class="text-white-50 fw-semibold small">Fully Paid</div>
+                <div class="fw-bold fs-5">{{ paid_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="app-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Receivables</h5>
+                <span class="badge rounded-pill text-bg-light">{{ money_lent_records|length }} record(s)</span>
+            </div>
+
+            {% if money_lent_records %}
+                <div class="vstack gap-3">
+                    {% for item in money_lent_records %}
+                        <div class="money-lent-row d-flex align-items-center gap-3 p-3 rounded-4">
+                            {% if item.status == "paid" %}
+                                <div class="money-lent-icon-wrap paid">
+                                    <i class="bi bi-check2-circle"></i>
+                                </div>
+                            {% elif item.status == "partial" %}
+                                <div class="money-lent-icon-wrap partial">
+                                    <i class="bi bi-hourglass-split"></i>
+                                </div>
+                            {% elif item.status == "written_off" or item.status == "cancelled" %}
+                                <div class="money-lent-icon-wrap danger">
+                                    <i class="bi bi-x-circle"></i>
+                                </div>
+                            {% else %}
+                                <div class="money-lent-icon-wrap">
+                                    <i class="bi bi-person-down"></i>
+                                </div>
+                            {% endif %}
+
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ item.borrower_name }}</div>
+
+                                <div class="text-muted small fw-semibold">
+                                    Lent from {{ item.account.name|default:"No account" }}
+                                    • {{ item.lent_date }}
+                                    {% if item.expected_payment_date %}
+                                        • Due {{ item.expected_payment_date }}
+                                    {% endif %}
+                                </div>
+
+                                {% if item.notes %}
+                                    <div class="text-muted small mt-1">
+                                        {{ item.notes|truncatechars:80 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-end">
+                                <div class="fw-bold fs-6">
+                                    ₱{{ item.current_balance|floatformat:2|intcomma }}
+                                </div>
+                                <div class="text-muted small fw-semibold">
+                                    of ₱{{ item.original_amount|floatformat:2|intcomma }}
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <a href="{% url 'finance_web_money_lent_payment_create' %}?money_lent={{ item.id }}"
+                                   class="btn btn-sm btn-light fw-bold rounded-4">
+                                    Payment
+                                </a>
+
+                                <a href="{% url 'finance_web_money_lent_edit' item.id %}"
+                                   class="btn btn-sm btn-light fw-bold rounded-4">
+                                    Edit
+                                </a>
+
+                                <form method="post"
+                                      action="{% url 'finance_web_money_lent_delete' item.id %}"
+                                      class="money-lent-action-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger fw-bold rounded-4"
+                                            onclick="return confirm('Delete this money lent record and restore balances?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-person-down"></i>
+                    </div>
+                    <h5 class="fw-bold">No money lent yet</h5>
+                    <p class="text-muted fw-semibold mb-0">
+                        Record money borrowed from you so Lazy Panda can track it. Bare minimum effort, wow.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="app-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Recent Payments</h5>
+                <span class="badge rounded-pill text-bg-light">{{ payments|length }} payment(s)</span>
+            </div>
+
+            {% if payments %}
+                <div class="vstack gap-3">
+                    {% for payment in payments %}
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background:#f8f7f4;">
+                            <div class="money-lent-icon-wrap paid">
+                                <i class="bi bi-cash-stack"></i>
+                            </div>
+
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ payment.money_lent.borrower_name }}</div>
+                                <div class="text-muted small fw-semibold">
+                                    Received in {{ payment.account.name|default:"No account" }}
+                                    • {{ payment.payment_date }}
+                                </div>
+
+                                {% if payment.notes %}
+                                    <div class="text-muted small mt-1">
+                                        {{ payment.notes|truncatechars:60 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-end">
+                                <div class="fw-bold text-success">
+                                    ₱{{ payment.amount|floatformat:2|intcomma }}
+                                </div>
+
+                                <div class="mt-2 d-flex gap-1 justify-content-end">
+                                    <a href="{% url 'finance_web_money_lent_payment_edit' payment.id %}"
+                                       class="btn btn-sm btn-light fw-bold rounded-4">
+                                        Edit
+                                    </a>
+
+                                    <form method="post"
+                                          action="{% url 'finance_web_money_lent_payment_delete' payment.id %}"
+                                          class="money-lent-action-form">
+                                        {% csrf_token %}
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger fw-bold rounded-4"
+                                                onclick="return confirm('Delete this payment and restore balances?')">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                    <h5 class="fw-bold">No payments yet</h5>
+                    <p class="text-muted fw-semibold mb-0">
+                        Payments will appear here once someone pays you back.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="app-card p-4 mt-4">
+    <h5 class="fw-bold mb-3">All Money Lent Records</h5>
+
+    {% if money_lent_records %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Borrower</th>
+                        <th>Account Used</th>
+                        <th>Lent Date</th>
+                        <th>Expected Payment</th>
+                        <th>Status</th>
+                        <th class="text-end">Original Amount</th>
+                        <th class="text-end">Balance</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in money_lent_records %}
+                        <tr>
+                            <td class="fw-bold">{{ item.borrower_name }}</td>
+                            <td>{{ item.account.name|default:"-" }}</td>
+                            <td>{{ item.lent_date }}</td>
+                            <td>{{ item.expected_payment_date|default:"-" }}</td>
+                            <td>
+                                {% if item.status == "paid" %}
+                                    <span class="badge rounded-pill" style="background:rgba(79,139,91,.12);color:#4F8B5B;">
+                                        {{ item.get_status_display }}
+                                    </span>
+                                {% elif item.status == "partial" %}
+                                    <span class="badge rounded-pill text-bg-warning">
+                                        {{ item.get_status_display }}
+                                    </span>
+                                {% elif item.status == "written_off" or item.status == "cancelled" %}
+                                    <span class="badge rounded-pill text-bg-danger">
+                                        {{ item.get_status_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill" style="background:rgba(254,117,3,.12);color:#FE7503;">
+                                        {{ item.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">
+                                ₱{{ item.original_amount|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-end fw-bold">
+                                ₱{{ item.current_balance|floatformat:2|intcomma }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'finance_web_money_lent_payment_create' %}?money_lent={{ item.id }}"
+                                   class="btn btn-sm btn-light fw-bold rounded-4">
+                                    Payment
+                                </a>
+
+                                <a href="{% url 'finance_web_money_lent_edit' item.id %}"
+                                   class="btn btn-sm btn-light fw-bold rounded-4">
+                                    Edit
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-muted fw-semibold">No records yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

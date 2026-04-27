@@ -444,6 +444,110 @@ class DebtPayment(models.Model):
         return f"{self.debt} - {self.amount}"
 
 
+class MoneyLent(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("partial", "Partially Paid"),
+        ("paid", "Paid"),
+        ("written_off", "Written Off"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="finance_money_lent",
+    )
+
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="money_lent_records",
+        help_text="Account where the money came from.",
+    )
+
+    borrower_name = models.CharField(max_length=150)
+    original_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    current_balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    lent_date = models.DateField()
+    expected_payment_date = models.DateField(null=True, blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="active",
+    )
+
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-lent_date", "-created_at"]
+
+    def clean(self):
+        if self.original_amount is not None and self.original_amount <= 0:
+            raise ValidationError("Original amount must be greater than zero.")
+
+        if self.current_balance is None:
+            self.current_balance = self.original_amount or 0
+
+        if self.current_balance < 0:
+            raise ValidationError("Current balance cannot be negative.")
+
+        if self.original_amount is not None and self.current_balance > self.original_amount:
+            raise ValidationError("Current balance cannot be greater than original amount.")
+
+    def __str__(self):
+        return f"{self.borrower_name} - {self.current_balance}"
+
+
+class MoneyLentPayment(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="finance_money_lent_payments",
+    )
+
+    money_lent = models.ForeignKey(
+        MoneyLent,
+        on_delete=models.CASCADE,
+        related_name="payments",
+    )
+
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="money_lent_payments",
+        help_text="Account where the repayment was received.",
+    )
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_date = models.DateField()
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-payment_date", "-created_at"]
+
+    def clean(self):
+        if self.amount <= 0:
+            raise ValidationError("Payment amount must be greater than zero.")
+
+    def __str__(self):
+        return f"{self.money_lent.borrower_name} paid {self.amount}"
+
+
 class SavingsGoal(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

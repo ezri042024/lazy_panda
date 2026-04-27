@@ -14,774 +14,791 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+          rel="stylesheet">
 
     <style>
-    :root {
-        --accent: #FE7503;
-        --accent-dark: #D95F00;
-        --accent-soft: rgba(254, 117, 3, .12);
-        --dark: #171717;
-        --bg: #F8F7F4;
-        --card: #FFFFFF;
-        --muted: #7A7A7A;
-        --border: rgba(0, 0, 0, .065);
-        --shadow: 0 18px 45px rgba(0, 0, 0, .07);
-        --shadow-soft: 0 12px 28px rgba(0, 0, 0, .045);
-        --radius-xl: 30px;
-        --radius-lg: 22px;
-        --radius-md: 16px;
-    }
+        :root {
+            --accent: #FE7503;
+            --accent-dark: #D95F00;
+            --accent-soft: rgba(254, 117, 3, .12);
+            --dark: #171717;
+            --bg: #F8F7F4;
+            --card: #FFFFFF;
+            --muted: #7A7A7A;
+            --border: rgba(0, 0, 0, .065);
+            --shadow: 0 18px 45px rgba(0, 0, 0, .07);
+            --shadow-soft: 0 12px 28px rgba(0, 0, 0, .045);
+            --radius-xl: 30px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+        }
 
-    * {
-        box-sizing: border-box;
-    }
+        * {
+            box-sizing: border-box;
+        }
 
-    body {
-        background:
-            radial-gradient(circle at top left, rgba(254, 117, 3, .10), transparent 32rem),
+        body {
+            background: radial-gradient(circle at top left, rgba(254, 117, 3, .10), transparent 32rem),
             radial-gradient(circle at bottom right, rgba(254, 117, 3, .08), transparent 28rem),
             var(--bg);
-        color: var(--dark);
-        font-family: "Poppins", sans-serif;
-        font-weight: 400;
-        font-style: normal;
-        min-height: 100vh;
-    }
-
-    a {
-        transition: all .18s ease;
-    }
-
-    .app-shell {
-        min-height: 100vh;
-    }
-
-    .sidebar {
-        width: 292px;
-        background: rgba(255, 255, 255, .88);
-        backdrop-filter: blur(18px);
-        border-right: 1px solid var(--border);
-        position: fixed;
-        inset: 0 auto 0 0;
-        padding: 22px;
-        z-index: 20;
-    }
-
-    .sidebar-inner {
-        height: 100%;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .sidebar-scroll {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        padding-right: 4px;
-    }
-
-    .sidebar-scroll::-webkit-scrollbar {
-        width: 5px;
-    }
-
-    .sidebar-scroll::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, .12);
-        border-radius: 999px;
-    }
-
-
-
-    .main-content {
-        margin-left: 292px;
-        padding: 28px;
-        min-height: 100vh;
-    }
-
-    .brand-wrap {
-        display: flex;
-        align-items: center;
-        gap: 13px;
-        padding: 10px 8px 24px;
-    }
-
-    .brand-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 18px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        display: grid;
-        place-items: center;
-        font-size: 25px;
-        flex: 0 0 auto;
-    }
-
-    .sidebar-brand-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 14px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(254, 117, 3, .10);
-        flex-shrink: 0;
-        overflow: hidden;
-    }
-
-    .sidebar-logo {
-        width: 40px;
-        height: 40px;
-        object-fit: contain;
-        display: block;
-    }
-
-    .brand-title {
-        font-weight: 950;
-        font-size: 1.18rem;
-        letter-spacing: -.4px;
-        line-height: 1.05;
-    }
-
-    .brand-subtitle {
-        color: var(--muted);
-        font-size: .78rem;
-        font-weight: 750;
-        margin-top: 3px;
-    }
-
-    .sidebar-section-label {
-        color: #9a9a9a;
-        font-size: .72rem;
-        font-weight: 900;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        padding: 10px 14px;
-        margin-top: 4px;
-    }
-
-    .nav {
-        gap: 5px;
-    }
-
-    .nav-link {
-        color: #555;
-        font-weight: 850;
-        border-radius: 17px;
-        padding: 12px 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        position: relative;
-    }
-
-    .nav-link i {
-        width: 22px;
-        text-align: center;
-        font-size: 1.03rem;
-    }
-
-    .nav-link:hover {
-        background: rgba(254, 117, 3, .085);
-        color: var(--accent);
-        transform: translateX(2px);
-    }
-
-    .nav-link.active {
-        background: var(--dark);
-        color: #fff;
-        box-shadow: 0 12px 24px rgba(23, 23, 23, .16);
-    }
-
-    .nav-link.active i {
-        color: var(--accent);
-    }
-
-    .sidebar-footer {
-        flex: 0 0 auto;
-        padding-top: 14px;
-    }
-
-    .user-card {
-        background: #F8F7F4;
-        border: 1px solid rgba(0, 0, 0, .04);
-        border-radius: 22px;
-        padding: 14px;
-    }
-
-    .user-avatar {
-        width: 42px;
-        height: 42px;
-        border-radius: 15px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        display: grid;
-        place-items: center;
-        font-weight: 950;
-        flex: 0 0 auto;
-    }
-
-    .main-topbar {
-        display: none;
-    }
-
-    .content-wrap {
-        max-width: 1480px;
-        margin: 0 auto;
-    }
-
-    .app-card {
-        background: rgba(255, 255, 255, .92);
-        border: 1px solid rgba(255, 255, 255, .72);
-        border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-soft);
-    }
-
-    .hero-card {
-        background:
-            radial-gradient(circle at top right, rgba(254, 117, 3, .28), transparent 18rem),
-            linear-gradient(135deg, #171717, #242424);
-        color: #fff;
-        border-radius: 34px;
-        padding: 28px;
-        box-shadow: 0 22px 52px rgba(0, 0, 0, .20);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .hero-card::after {
-        content: "";
-        position: absolute;
-        width: 180px;
-        height: 180px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, .045);
-        right: -70px;
-        bottom: -80px;
-    }
-
-    .mini-card {
-        background: rgba(255, 255, 255, .92);
-        border: 1px solid rgba(255, 255, 255, .72);
-        border-radius: 26px;
-        padding: 20px;
-        box-shadow: var(--shadow-soft);
-        height: 100%;
-    }
-
-    .mini-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
-        margin-bottom: 14px;
-        font-size: 1.08rem;
-    }
-
-    .text-money {
-        font-weight: 700;
-        letter-spacing: -.8px;
-    }
-
-    .btn {
-        font-weight: 850;
-    }
-
-    .btn-accent {
-        background: var(--accent);
-        color: #fff;
-        border: 0;
-        font-weight: 900;
-        border-radius: 16px;
-        padding: 11px 18px;
-        box-shadow: 0 12px 24px rgba(254, 117, 3, .20);
-    }
-
-    .btn-accent:hover {
-        background: var(--accent-dark);
-        color: #fff;
-        transform: translateY(-1px);
-        box-shadow: 0 16px 30px rgba(254, 117, 3, .24);
-    }
-
-    .btn-light {
-        background: #fff;
-        border: 1px solid var(--border);
-    }
-
-    .btn-light:hover {
-        background: #f4f4f4;
-        border-color: rgba(0, 0, 0, .09);
-    }
-
-    .form-label {
-        color: #333;
-    }
-
-    .form-control,
-    .form-select {
-        border: 1px solid rgba(0, 0, 0, .04);
-        border-radius: 17px;
-        background: #F3F2EF;
-        padding: 13px 15px;
-        font-weight: 750;
-        box-shadow: none !important;
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-        background: #fff;
-        border-color: rgba(254, 117, 3, .55);
-        box-shadow: 0 0 0 .25rem rgba(254, 117, 3, .12) !important;
-    }
-
-    .table {
-        margin-bottom: 0;
-    }
-
-    .table thead th {
-        color: #777;
-        font-size: .78rem;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        border-bottom-color: rgba(0, 0, 0, .06);
-        padding-top: 14px;
-        padding-bottom: 14px;
-    }
-
-    .table tbody td {
-        border-bottom-color: rgba(0, 0, 0, .045);
-        padding-top: 15px;
-        padding-bottom: 15px;
-    }
-
-    .badge {
-        font-weight: 850;
-        padding: .55em .8em;
-    }
-
-    .alert {
-        border: 0;
-        border-radius: 20px;
-        box-shadow: var(--shadow-soft);
-        font-weight: 750;
-    }
-
-    .alert-success {
-        background: #FFF3E8;
-        color: #9A4400;
-    }
-
-    .alert-danger,
-    .alert-error {
-        background: #FFECEC;
-        color: #B42318;
-    }
-
-    .alert-info {
-        background: #FFF3E8;
-        color: #A34800;
-    }
-
-    .auth-main {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 28px;
-    }
-
-    .auth-card {
-        width: 100%;
-        max-width: 520px;
-    }
-
-    .page-title {
-        font-weight: 700;
-        letter-spacing: -.7px;
-    }
-
-    .text-muted {
-        color: var(--muted) !important;
-    }
-
-    .mobile-bottom-nav {
-        display: none;
-        position: fixed;
-        left: 14px;
-        right: 14px;
-        bottom: 14px;
-        z-index: 1040;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-        padding: 8px;
-        background: rgba(255, 255, 255, .94);
-        backdrop-filter: blur(18px);
-        border: 1px solid rgba(0, 0, 0, .06);
-        border-radius: 26px;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, .16);
-    }
-
-    .mobile-nav-item {
-        border: 0;
-        background: transparent;
-        color: #777;
-        text-decoration: none;
-        border-radius: 20px;
-        padding: 9px 6px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 3px;
-        font-size: .7rem;
-        font-weight: 900;
-        line-height: 1;
-    }
-
-    .mobile-nav-item i {
-        font-size: 1.18rem;
-    }
-
-    .mobile-nav-item.active {
-        background: var(--dark);
-        color: #fff;
-    }
-
-    .mobile-nav-item.active i {
-        color: var(--accent);
-    }
-
-    .mobile-more-menu {
-        border: 0;
-        border-radius: 28px 28px 0 0;
-        background: #fff;
-        height: 72vh !important;
-        max-height: 72vh;
-    }
-
-    .mobile-more-menu .offcanvas-body {
-        overflow-y: auto;
-        padding-bottom: 24px;
-    }
-
-    .mobile-more-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    @media (max-width: 575px) {
-        .mobile-more-menu {
-            height: 78vh !important;
-            max-height: 78vh;
+            color: var(--dark);
+            font-family: "Poppins", sans-serif;
+            font-weight: 400;
+            font-style: normal;
+            min-height: 100vh;
         }
-    }
 
-    .mobile-more-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .mobile-more-link {
-        text-decoration: none;
-        color: var(--dark);
-        background: #F8F7F4;
-        border-radius: 22px;
-        padding: 16px;
-        font-weight: 900;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .mobile-more-link i {
-        width: 38px;
-        height: 38px;
-        border-radius: 15px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-    }
-
-    .mobile-more-link:hover {
-        color: var(--accent);
-        background: rgba(254, 117, 3, .10);
-    }
-
-    .page-loading-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 3000;
-        background: rgba(248, 247, 244, .72);
-        backdrop-filter: blur(10px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-    }
-
-    .page-loading-overlay.show {
-        display: flex;
-    }
-
-    .page-loading-card {
-        background: rgba(255, 255, 255, .95);
-        border: 1px solid rgba(0, 0, 0, .06);
-        border-radius: 26px;
-        padding: 18px 20px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        box-shadow: 0 22px 55px rgba(0, 0, 0, .16);
-    }
-
-    .page-loading-spinner {
-        width: 38px;
-        height: 38px;
-        border-radius: 999px;
-        border: 4px solid rgba(254, 117, 3, .18);
-        border-top-color: #FE7503;
-        animation: pageSpin .75s linear infinite;
-        flex: 0 0 auto;
-    }
-
-    .page-loading-title {
-        color: #171717;
-        font-weight: 950;
-        line-height: 1.1;
-    }
-
-    .page-loading-subtitle {
-        color: #7A7A7A;
-        font-size: .82rem;
-        font-weight: 750;
-        margin-top: 3px;
-    }
-
-    .user-card {
-        overflow: hidden;
-    }
-
-    .user-card .d-flex {
-        min-width: 0;
-    }
-
-    .user-info-text {
-        min-width: 0;
-        flex: 1 1 auto;
-        max-width: 100%;
-    }
-
-    .user-info-text .text-truncate {
-        display: block;
-        max-width: 100%;
-    }
-
-    @keyframes pageSpin {
-        to {
-            transform: rotate(360deg);
+        a {
+            transition: all .18s ease;
         }
-    }
 
-    @media (max-width: 991px) {
-        body {
-            background: var(--bg);
-            padding-bottom: 84px;
+        .app-shell {
+            min-height: 100vh;
         }
 
         .sidebar {
-            display: none;
+            width: 292px;
+            background: rgba(255, 255, 255, .88);
+            backdrop-filter: blur(18px);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            inset: 0 auto 0 0;
+            padding: 22px;
+            z-index: 20;
         }
+
+        .sidebar-inner {
+            height: 100%;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, .12);
+            border-radius: 999px;
+        }
+
 
         .main-content {
-            margin-left: 0;
-            padding: 18px;
-            padding-bottom: 96px;
+            margin-left: 292px;
+            padding: 28px;
+            min-height: 100vh;
         }
 
-        .mobile-bottom-nav {
-            display: grid !important;
+        .brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 10px 8px 24px;
         }
-    }
 
-    @media (max-width: 575px) {
-        .main-content {
+        .brand-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 18px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            font-size: 25px;
+            flex: 0 0 auto;
+        }
+
+        .sidebar-brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(254, 117, 3, .10);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-title {
+            font-weight: 950;
+            font-size: 1.18rem;
+            letter-spacing: -.4px;
+            line-height: 1.05;
+        }
+
+        .brand-subtitle {
+            color: var(--muted);
+            font-size: .78rem;
+            font-weight: 750;
+            margin-top: 3px;
+        }
+
+        .sidebar-section-label {
+            color: #9a9a9a;
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: 10px 14px;
+            margin-top: 4px;
+        }
+
+        .nav {
+            gap: 5px;
+        }
+
+        .nav-link {
+            color: #555;
+            font-weight: 850;
+            border-radius: 17px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .nav-link i {
+            width: 22px;
+            text-align: center;
+            font-size: 1.03rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(254, 117, 3, .085);
+            color: var(--accent);
+            transform: translateX(2px);
+        }
+
+        .nav-link.active {
+            background: var(--dark);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(23, 23, 23, .16);
+        }
+
+        .nav-link.active i {
+            color: var(--accent);
+        }
+
+        .sidebar-footer {
+            flex: 0 0 auto;
+            padding-top: 14px;
+        }
+
+        .user-card {
+            background: #F8F7F4;
+            border: 1px solid rgba(0, 0, 0, .04);
+            border-radius: 22px;
             padding: 14px;
         }
 
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 15px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            font-weight: 950;
+            flex: 0 0 auto;
+        }
+
+        .main-topbar {
+            display: none;
+        }
+
+        .content-wrap {
+            max-width: 1480px;
+            margin: 0 auto;
+        }
+
+        .app-card {
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid rgba(255, 255, 255, .72);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-soft);
+        }
+
         .hero-card {
-            padding: 22px;
-            border-radius: 28px;
+            background: radial-gradient(circle at top right, rgba(254, 117, 3, .28), transparent 18rem),
+            linear-gradient(135deg, #171717, #242424);
+            color: #fff;
+            border-radius: 34px;
+            padding: 28px;
+            box-shadow: 0 22px 52px rgba(0, 0, 0, .20);
+            position: relative;
+            overflow: hidden;
         }
 
-        .app-card,
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .045);
+            right: -70px;
+            bottom: -80px;
+        }
+
         .mini-card {
-            border-radius: 24px;
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid rgba(255, 255, 255, .72);
+            border-radius: 26px;
+            padding: 20px;
+            box-shadow: var(--shadow-soft);
+            height: 100%;
         }
 
-        .display-5 {
-            font-size: 2rem;
+        .mini-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 14px;
+            font-size: 1.08rem;
         }
-    }
 
-    .finance-chat-widget {
-        position: fixed;
-        right: 24px;
-        bottom: 24px;
-        z-index: 2200;
-    }
+        .text-money {
+            font-weight: 700;
+            letter-spacing: -.8px;
+        }
 
-    .finance-chat-toggle {
-        width: 62px;
-        height: 62px;
-        border-radius: 22px;
-        border: 0;
-        background: var(--accent);
-        color: #fff;
-        box-shadow: 0 18px 40px rgba(254, 117, 3, .28);
-        font-size: 1.4rem;
-    }
+        .btn {
+            font-weight: 850;
+        }
 
-    .finance-chat-panel {
-        position: absolute;
-        right: 0;
-        bottom: 78px;
-        width: 380px;
-        max-width: calc(100vw - 32px);
-        background: #fff;
-        border-radius: 28px;
-        box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
-        overflow: hidden;
-        border: 1px solid rgba(0, 0, 0, .06);
-    }
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+            border: 0;
+            font-weight: 900;
+            border-radius: 16px;
+            padding: 11px 18px;
+            box-shadow: 0 12px 24px rgba(254, 117, 3, .20);
+        }
 
-    .finance-chat-header {
-        background: var(--dark);
-        color: #fff;
-        padding: 16px 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+        .btn-accent:hover {
+            background: var(--accent-dark);
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 30px rgba(254, 117, 3, .24);
+        }
 
-    .finance-chat-close {
-        border: 0;
-        background: rgba(255,255,255,.12);
-        color: #fff;
-        width: 34px;
-        height: 34px;
-        border-radius: 12px;
-    }
+        .btn-light {
+            background: #fff;
+            border: 1px solid var(--border);
+        }
 
-    .finance-chat-messages {
-        padding: 14px;
-        height: 300px;
-        overflow-y: auto;
-        background: #F8F7F4;
-    }
+        .btn-light:hover {
+            background: #f4f4f4;
+            border-color: rgba(0, 0, 0, .09);
+        }
 
-    .finance-chat-bubble {
-        padding: 11px 13px;
-        border-radius: 18px;
-        margin-bottom: 10px;
-        font-weight: 650;
-        font-size: .9rem;
-        line-height: 1.35;
-    }
+        .form-label {
+            color: #333;
+        }
 
-    .finance-chat-bubble.user {
-        background: var(--accent);
-        color: #fff;
-        margin-left: 45px;
-        border-bottom-right-radius: 6px;
-    }
+        .form-control,
+        .form-select {
+            border: 1px solid rgba(0, 0, 0, .04);
+            border-radius: 17px;
+            background: #F3F2EF;
+            padding: 13px 15px;
+            font-weight: 750;
+            box-shadow: none !important;
+        }
 
-    .finance-chat-bubble.assistant {
-        background: #fff;
-        color: var(--dark);
-        margin-right: 35px;
-        border-bottom-left-radius: 6px;
-    }
+        .form-control:focus,
+        .form-select:focus {
+            background: #fff;
+            border-color: rgba(254, 117, 3, .55);
+            box-shadow: 0 0 0 .25rem rgba(254, 117, 3, .12) !important;
+        }
 
-    .finance-chat-confirm {
-        padding: 10px 14px;
-        display: flex;
-        gap: 8px;
-        background: #fff;
-        border-top: 1px solid rgba(0,0,0,.06);
-    }
+        .table {
+            margin-bottom: 0;
+        }
 
-    .finance-chat-form {
-        padding: 12px;
-        display: flex;
-        gap: 8px;
-        background: #fff;
-    }
+        .table thead th {
+            color: #777;
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            border-bottom-color: rgba(0, 0, 0, .06);
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
 
-    .finance-chat-form .form-control {
-        min-height: 46px;
-    }
+        .table tbody td {
+            border-bottom-color: rgba(0, 0, 0, .045);
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
 
-    @media (max-width: 767px) {
-        .finance-chat-widget {
+        .badge {
+            font-weight: 850;
+            padding: .55em .8em;
+        }
+
+        .alert {
+            border: 0;
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
+            font-weight: 750;
+        }
+
+        .alert-success {
+            background: #FFF3E8;
+            color: #9A4400;
+        }
+
+        .alert-danger,
+        .alert-error {
+            background: #FFECEC;
+            color: #B42318;
+        }
+
+        .alert-info {
+            background: #FFF3E8;
+            color: #A34800;
+        }
+
+        .auth-main {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .page-title {
+            font-weight: 700;
+            letter-spacing: -.7px;
+        }
+
+        .text-muted {
+            color: var(--muted) !important;
+        }
+
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            left: 14px;
             right: 14px;
-            bottom: 96px;
+            bottom: 14px;
+            z-index: 1040;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            padding: 8px;
+            background: rgba(255, 255, 255, .94);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 26px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, .16);
+        }
+
+        .mobile-nav-item {
+            border: 0;
+            background: transparent;
+            color: #777;
+            text-decoration: none;
+            border-radius: 20px;
+            padding: 9px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-size: .7rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.18rem;
+        }
+
+        .mobile-nav-item.active {
+            background: var(--dark);
+            color: #fff;
+        }
+
+        .mobile-nav-item.active i {
+            color: var(--accent);
+        }
+
+        .mobile-more-menu {
+            border: 0;
+            border-radius: 28px 28px 0 0;
+            background: #fff;
+            height: 72vh !important;
+            max-height: 72vh;
+        }
+
+        .mobile-more-menu .offcanvas-body {
+            overflow-y: auto;
+            padding-bottom: 24px;
+        }
+
+        .mobile-more-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 575px) {
+            .mobile-more-menu {
+                height: 78vh !important;
+                max-height: 78vh;
+            }
+        }
+
+        .mobile-more-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .mobile-more-link {
+            text-decoration: none;
+            color: var(--dark);
+            background: #F8F7F4;
+            border-radius: 22px;
+            padding: 16px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mobile-more-link i {
+            width: 38px;
+            height: 38px;
+            border-radius: 15px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+        }
+
+        .mobile-more-link:hover {
+            color: var(--accent);
+            background: rgba(254, 117, 3, .10);
+        }
+
+        .page-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: rgba(248, 247, 244, .72);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .page-loading-overlay.show {
+            display: flex;
+        }
+
+        .page-loading-card {
+            background: rgba(255, 255, 255, .95);
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 26px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 22px 55px rgba(0, 0, 0, .16);
+        }
+
+        .page-loading-spinner {
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            border: 4px solid rgba(254, 117, 3, .18);
+            border-top-color: #FE7503;
+            animation: pageSpin .75s linear infinite;
+            flex: 0 0 auto;
+        }
+
+        .page-loading-title {
+            color: #171717;
+            font-weight: 950;
+            line-height: 1.1;
+        }
+
+        .page-loading-subtitle {
+            color: #7A7A7A;
+            font-size: .82rem;
+            font-weight: 750;
+            margin-top: 3px;
+        }
+
+        .user-card {
+            overflow: hidden;
+        }
+
+        .user-card .d-flex {
+            min-width: 0;
+        }
+
+        .user-info-text {
+            min-width: 0;
+            flex: 1 1 auto;
+            max-width: 100%;
+        }
+
+        .user-info-text .text-truncate {
+            display: block;
+            max-width: 100%;
+        }
+
+        @keyframes pageSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 991px) {
+            body {
+                background: var(--bg);
+                padding-bottom: 84px;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 18px;
+                padding-bottom: 96px;
+            }
+
+            .mobile-bottom-nav {
+                display: grid !important;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .main-content {
+                padding: 14px;
+            }
+
+            .hero-card {
+                padding: 22px;
+                border-radius: 28px;
+            }
+
+            .app-card,
+            .mini-card {
+                border-radius: 24px;
+            }
+
+            .display-5 {
+                font-size: 2rem;
+            }
+        }
+
+        .finance-chat-widget {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 2200;
         }
 
         .finance-chat-toggle {
-            width: 56px;
-            height: 56px;
-            border-radius: 20px;
+            width: 62px;
+            height: 62px;
+            border-radius: 22px;
+            border: 0;
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 18px 40px rgba(254, 117, 3, .28);
+            font-size: 1.4rem;
         }
 
         .finance-chat-panel {
-            position: fixed;
-            left: 12px;
-            right: 12px;
-            bottom: 160px;
-            width: auto;
-            max-width: none;
+            position: absolute;
+            right: 0;
+            bottom: 78px;
+            width: 380px;
+            max-width: calc(100vw - 32px);
+            background: #fff;
+            border-radius: 28px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, .06);
+        }
+
+        .finance-chat-header {
+            background: var(--dark);
+            color: #fff;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .finance-chat-close {
+            border: 0;
+            background: rgba(255, 255, 255, .12);
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
         }
 
         .finance-chat-messages {
-            height: 260px;
+            padding: 14px;
+            height: 300px;
+            overflow-y: auto;
+            background: #F8F7F4;
         }
-    }
-    .finance-chat-choice-wrap {
-        display: grid;
-        gap: 8px;
-        margin: 8px 35px 12px 0;
-    }
 
-    .finance-chat-choice-btn {
-        border: 0;
-        background: #fff;
-        border-radius: 16px;
-        padding: 10px 12px;
-        text-align: left;
-        box-shadow: 0 6px 16px rgba(0,0,0,.06);
-        font-weight: 900;
-        color: var(--dark);
-    }
+        .finance-chat-bubble {
+            padding: 11px 13px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            font-weight: 650;
+            font-size: .9rem;
+            line-height: 1.35;
+        }
 
-    .finance-chat-choice-btn small {
-        display: block;
-        color: var(--muted);
-        font-weight: 700;
-        margin-top: 2px;
-    }
+        .finance-chat-bubble.user {
+            background: var(--accent);
+            color: #fff;
+            margin-left: 45px;
+            border-bottom-right-radius: 6px;
+        }
 
-    .finance-chat-choice-btn:hover {
-        background: rgba(254,117,3,.10);
-        color: var(--accent);
-    }
+        .finance-chat-bubble.assistant {
+            background: #fff;
+            color: var(--dark);
+            margin-right: 35px;
+            border-bottom-left-radius: 6px;
+        }
 
-</style>
+        .finance-chat-confirm {
+            padding: 10px 14px;
+            display: flex;
+            gap: 8px;
+            background: #fff;
+            border-top: 1px solid rgba(0, 0, 0, .06);
+        }
+
+        .finance-chat-form {
+            padding: 12px;
+            display: flex;
+            gap: 8px;
+            background: #fff;
+        }
+
+        .finance-chat-form .form-control {
+            min-height: 46px;
+        }
+
+        @media (max-width: 767px) {
+            .finance-chat-widget {
+                right: 14px;
+                bottom: 96px;
+            }
+
+            .finance-chat-toggle {
+                width: 56px;
+                height: 56px;
+                border-radius: 20px;
+            }
+
+            .finance-chat-panel {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                bottom: 160px;
+                width: auto;
+                max-width: none;
+            }
+
+            .finance-chat-messages {
+                height: 260px;
+            }
+        }
+
+        .finance-chat-choice-wrap {
+            display: grid;
+            gap: 8px;
+            margin: 8px 35px 12px 0;
+        }
+
+        .finance-chat-choice-btn {
+            border: 0;
+            background: #fff;
+            border-radius: 16px;
+            padding: 10px 12px;
+            text-align: left;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .06);
+            font-weight: 900;
+            color: var(--dark);
+        }
+
+        .finance-chat-choice-btn small {
+            display: block;
+            color: var(--muted);
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .finance-chat-choice-btn:hover {
+            background: rgba(254, 117, 3, .10);
+            color: var(--accent);
+        }
+
+        .finance-chat-upload-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 17px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            font-size: 1.05rem;
+            flex: 0 0 auto;
+        }
+
+        .finance-chat-upload-btn:hover {
+            background: rgba(254, 117, 3, .10);
+            color: var(--accent-dark);
+        }
+
+    </style>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -792,7 +809,8 @@
             <div class="sidebar-inner">
                 <div class="brand-wrap">
                     <div class="sidebar-brand-icon">
-                        <img src="{% static 'finance_web/img/lazy_logo.png' %}" alt="Budget App Logo" class="sidebar-logo">
+                        <img src="{% static 'finance_web/img/lazy_logo.png' %}" alt="Budget App Logo"
+                             class="sidebar-logo">
                     </div>
                     <div>
                         <div class="brand-title">Lazy Fox</div>
@@ -843,6 +861,12 @@
                            class="nav-link {% if 'debt' in request.resolver_match.url_name %}active{% endif %}">
                             <i class="bi bi-credit-card-2-front"></i>
                             <span>Debts</span>
+                        </a>
+
+                        <a href="{% url 'finance_web_money_lent' %}"
+                           class="nav-link {% if 'money_lent' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-person-down"></i>
+                            <span>Money Lent</span>
                         </a>
 
                         <a href="{% url 'finance_web_budgets' %}"
@@ -970,6 +994,11 @@
                         <span>Debts</span>
                     </a>
 
+                    <a href="{% url 'finance_web_money_lent' %}" class="mobile-more-link">
+                        <i class="bi bi-person-down"></i>
+                        <span>Money Lent</span>
+                    </a>
+
                     <a href="{% url 'finance_web_budgets' %}" class="mobile-more-link">
                         <i class="bi bi-pie-chart"></i>
                         <span>Budgets</span>
@@ -1085,217 +1114,280 @@
 </script>
 {% block extra_js %}{% endblock %}
 {% if request.user.is_authenticated %}
-<div class="finance-chat-widget">
-    <button type="button" id="financeChatToggle" class="finance-chat-toggle">
-        <i class="bi bi-chat-dots-fill"></i>
-    </button>
+    <div class="finance-chat-widget">
+        <button type="button" id="financeChatToggle" class="finance-chat-toggle">
+            <i class="bi bi-chat-dots-fill"></i>
+        </button>
 
-    <div id="financeChatPanel" class="finance-chat-panel d-none">
-        <div class="finance-chat-header">
-            <div>
-                <div class="fw-bold">Finance Assistant</div>
-                <div class="small opacity-75">Try: jollibee 500</div>
+        <div id="financeChatPanel" class="finance-chat-panel d-none">
+            <div class="finance-chat-header">
+                <div>
+                    <div class="fw-bold">Finance Assistant</div>
+                    <div class="small opacity-75">Try: jollibee 500</div>
+                </div>
+
+                <button type="button" id="financeChatClose" class="finance-chat-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
-            <button type="button" id="financeChatClose" class="finance-chat-close">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-
-        <div id="financeChatMessages" class="finance-chat-messages">
-            <div class="finance-chat-bubble assistant">
-                Hi! You can type things like <strong>jollibee 500</strong>, <strong>salary 10000</strong>, or <strong>pay meralco bill</strong>.
+            <div id="financeChatMessages" class="finance-chat-messages">
+                <div class="finance-chat-bubble assistant">
+                    Hi! You can type things like <strong>jollibee 500</strong>, <strong>salary 10000</strong>, or
+                    <strong>pay meralco bill</strong>.
+                </div>
             </div>
-        </div>
 
-        <div id="financeChatConfirm" class="finance-chat-confirm d-none">
-            <button type="button" id="financeChatConfirmBtn" class="btn btn-accent btn-sm">
-                Confirm
-            </button>
-            <button type="button" id="financeChatCancelBtn" class="btn btn-light btn-sm fw-bold rounded-4">
-                Cancel
-            </button>
-        </div>
+            <div id="financeChatConfirm" class="finance-chat-confirm d-none">
+                <button type="button" id="financeChatConfirmBtn" class="btn btn-accent btn-sm">
+                    Confirm
+                </button>
+                <button type="button" id="financeChatCancelBtn" class="btn btn-light btn-sm fw-bold rounded-4">
+                    Cancel
+                </button>
+            </div>
 
-        <form id="financeChatForm" class="finance-chat-form" data-no-loading="true">
-            {% csrf_token %}
-            <input id="financeChatInput"
-                   type="text"
-                   class="form-control"
-                   placeholder="Type: jollibee 500">
-            <button class="btn btn-accent" type="submit">
-                <i class="bi bi-send-fill"></i>
-            </button>
-        </form>
+            <form id="financeChatForm" class="finance-chat-form" data-no-loading="true">
+                {% csrf_token %}
+
+                <input id="financeReceiptInput"
+                       type="file"
+                       class="d-none"
+                       accept="image/png,image/jpeg,image/webp">
+
+                <button type="button"
+                        id="financeReceiptUploadBtn"
+                        class="finance-chat-upload-btn"
+                        title="Upload receipt">
+                    <i class="bi bi-paperclip"></i>
+                </button>
+
+                <input id="financeChatInput"
+                       type="text"
+                       class="form-control"
+                       placeholder="Type: jollibee 500">
+
+                <button class="btn btn-accent" type="submit">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </form>
+        </div>
     </div>
-</div>
 {% endif %}
 <script>
-(function () {
-    const toggle = document.getElementById('financeChatToggle');
-    const panel = document.getElementById('financeChatPanel');
-    const closeBtn = document.getElementById('financeChatClose');
-    const form = document.getElementById('financeChatForm');
-    const input = document.getElementById('financeChatInput');
-    const messages = document.getElementById('financeChatMessages');
-    const confirmBox = document.getElementById('financeChatConfirm');
-    const confirmBtn = document.getElementById('financeChatConfirmBtn');
-    const cancelBtn = document.getElementById('financeChatCancelBtn');
-    const chooseUrl = "{% url 'finance_web_assistant_choose' %}";
+    (function () {
+        const toggle = document.getElementById('financeChatToggle');
+        const panel = document.getElementById('financeChatPanel');
+        const closeBtn = document.getElementById('financeChatClose');
+        const form = document.getElementById('financeChatForm');
+        const input = document.getElementById('financeChatInput');
+        const messages = document.getElementById('financeChatMessages');
+        const confirmBox = document.getElementById('financeChatConfirm');
+        const confirmBtn = document.getElementById('financeChatConfirmBtn');
+        const cancelBtn = document.getElementById('financeChatCancelBtn');
+        const chooseUrl = "{% url 'finance_web_assistant_choose' %}";
+        const receiptUploadBtn = document.getElementById('financeReceiptUploadBtn');
+        const receiptInput = document.getElementById('financeReceiptInput');
+        const receiptUrl = "{% url 'finance_web_assistant_receipt' %}";
 
-    if (!toggle || !panel || !form) return;
+        if (!toggle || !panel || !form) return;
 
-    let hasPendingAction = false;
+        let hasPendingAction = false;
 
-    function getCsrfToken() {
-        const csrfInput = form.querySelector('[name=csrfmiddlewaretoken]');
-        return csrfInput ? csrfInput.value : '';
-    }
+        function getCsrfToken() {
+            const csrfInput = form.querySelector('[name=csrfmiddlewaretoken]');
+            return csrfInput ? csrfInput.value : '';
+        }
 
-    function renderChoices(choiceType, choices) {
-        const wrap = document.createElement('div');
-        wrap.className = 'finance-chat-choice-wrap';
+        function renderChoices(choiceType, choices) {
+            const wrap = document.createElement('div');
+            wrap.className = 'finance-chat-choice-wrap';
 
-        choices.forEach(function (choice) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'finance-chat-choice-btn';
-            btn.dataset.choiceType = choiceType;
-            btn.dataset.choiceId = choice.id;
-            btn.innerHTML = `
+            choices.forEach(function (choice) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'finance-chat-choice-btn';
+                btn.dataset.choiceType = choiceType;
+                btn.dataset.choiceId = choice.id;
+                btn.innerHTML = `
                 <span>${choice.name}</span>
                 <small>${choice.type || ''}</small>
             `;
-            wrap.appendChild(btn);
+                wrap.appendChild(btn);
+            });
+
+            messages.appendChild(wrap);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addBubble(text, type) {
+            const bubble = document.createElement('div');
+            bubble.className = `finance-chat-bubble ${type}`;
+            bubble.innerHTML = text;
+            messages.appendChild(bubble);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function showConfirm(show) {
+            hasPendingAction = show;
+            confirmBox.classList.toggle('d-none', !show);
+        }
+
+        toggle.addEventListener('click', function () {
+            panel.classList.toggle('d-none');
+            input.focus();
         });
 
-        messages.appendChild(wrap);
-        messages.scrollTop = messages.scrollHeight;
-    }
+        closeBtn.addEventListener('click', function () {
+            panel.classList.add('d-none');
+        });
 
-    function addBubble(text, type) {
-        const bubble = document.createElement('div');
-        bubble.className = `finance-chat-bubble ${type}`;
-        bubble.innerHTML = text;
-        messages.appendChild(bubble);
-        messages.scrollTop = messages.scrollHeight;
-    }
+        cancelBtn.addEventListener('click', function () {
+            showConfirm(false);
+            addBubble('Okay, cancelled.', 'assistant');
+        });
 
-    function showConfirm(show) {
-        hasPendingAction = show;
-        confirmBox.classList.toggle('d-none', !show);
-    }
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
 
-    toggle.addEventListener('click', function () {
-        panel.classList.toggle('d-none');
-        input.focus();
-    });
+            const message = input.value.trim();
+            if (!message) return;
 
-    closeBtn.addEventListener('click', function () {
-        panel.classList.add('d-none');
-    });
+            addBubble(message, 'user');
+            input.value = '';
+            showConfirm(false);
 
-    cancelBtn.addEventListener('click', function () {
-        showConfirm(false);
-        addBubble('Okay, cancelled.', 'assistant');
-    });
+            try {
+                const response = await fetch("{% url 'finance_web_assistant' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({message}),
+                });
 
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
+                const data = await response.json();
 
-        const message = input.value.trim();
-        if (!message) return;
+                addBubble(data.reply || 'Done.', 'assistant');
 
-        addBubble(message, 'user');
-        input.value = '';
-        showConfirm(false);
+                if (data.needs_confirmation) {
+                    showConfirm(true);
+                }
 
-        try {
-            const response = await fetch("{% url 'finance_web_assistant' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({ message }),
-            });
+                if (data.needs_choice) {
+                    renderChoices(data.choice_type, data.choices || []);
+                }
+            } catch (error) {
+                addBubble('Sorry, something went wrong.', 'assistant');
+            }
+        });
 
-            const data = await response.json();
+        messages.addEventListener('click', async function (event) {
+            const btn = event.target.closest('.finance-chat-choice-btn');
+            if (!btn) return;
 
-            addBubble(data.reply || 'Done.', 'assistant');
+            const choiceType = btn.dataset.choiceType;
+            const choiceId = btn.dataset.choiceId;
 
-            if (data.needs_confirmation) {
-                showConfirm(true);
+            addBubble(btn.querySelector('span').textContent, 'user');
+
+            try {
+                const response = await fetch(chooseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        choice_type: choiceType,
+                        choice_id: choiceId,
+                    }),
+                });
+
+                const data = await response.json();
+                addBubble(data.reply || 'Okay.', 'assistant');
+
+                if (data.needs_confirmation) {
+                    showConfirm(true);
+                }
+            } catch (error) {
+                addBubble('Sorry, I could not apply that choice.', 'assistant');
+            }
+        });
+
+        confirmBtn.addEventListener('click', async function () {
+            if (!hasPendingAction) return;
+
+            showConfirm(false);
+
+            try {
+                const response = await fetch("{% url 'finance_web_assistant_confirm' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                });
+
+                const data = await response.json();
+                addBubble(data.reply || 'Confirmed.', 'assistant');
+
+                if (data.ok) {
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 700);
+                }
+            } catch (error) {
+                addBubble('Sorry, confirmation failed.', 'assistant');
             }
 
-            if (data.needs_choice) {
-                renderChoices(data.choice_type, data.choices || []);
+        });
+        if (receiptUploadBtn && receiptInput) {
+                receiptUploadBtn.addEventListener('click', function () {
+                    receiptInput.click();
+                });
+
+                receiptInput.addEventListener('change', async function () {
+                    const file = receiptInput.files[0];
+
+                    if (!file) return;
+
+                    addBubble(`Uploaded receipt: ${file.name}`, 'user');
+                    addBubble('Reading the receipt with AI… ugh, fine. 😴', 'assistant');
+                    showConfirm(false);
+
+                    const formData = new FormData();
+                    formData.append('receipt', file);
+
+                    try {
+                        const response = await fetch(receiptUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCsrfToken(),
+                            },
+                            body: formData,
+                        });
+
+                        const data = await response.json();
+
+                        addBubble(data.reply || 'Receipt read.', 'assistant');
+
+                        if (data.needs_confirmation) {
+                            showConfirm(true);
+                        }
+
+                        if (data.needs_choice) {
+                            renderChoices(data.choice_type, data.choices || []);
+                        }
+                    } catch (error) {
+                        addBubble('Sorry, I could not read that receipt.', 'assistant');
+                    } finally {
+                        receiptInput.value = '';
+                    }
+                });
             }
-        } catch (error) {
-            addBubble('Sorry, something went wrong.', 'assistant');
-        }
-    });
-
-    messages.addEventListener('click', async function (event) {
-        const btn = event.target.closest('.finance-chat-choice-btn');
-        if (!btn) return;
-
-        const choiceType = btn.dataset.choiceType;
-        const choiceId = btn.dataset.choiceId;
-
-        addBubble(btn.querySelector('span').textContent, 'user');
-
-        try {
-            const response = await fetch(chooseUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    choice_type: choiceType,
-                    choice_id: choiceId,
-                }),
-            });
-
-            const data = await response.json();
-            addBubble(data.reply || 'Okay.', 'assistant');
-
-            if (data.needs_confirmation) {
-                showConfirm(true);
-            }
-        } catch (error) {
-            addBubble('Sorry, I could not apply that choice.', 'assistant');
-        }
-    });
-
-    confirmBtn.addEventListener('click', async function () {
-        if (!hasPendingAction) return;
-
-        showConfirm(false);
-
-        try {
-            const response = await fetch("{% url 'finance_web_assistant_confirm' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            });
-
-            const data = await response.json();
-            addBubble(data.reply || 'Confirmed.', 'assistant');
-
-            if (data.ok) {
-                setTimeout(function () {
-                    window.location.reload();
-                }, 700);
-            }
-        } catch (error) {
-            addBubble('Sorry, confirmation failed.', 'assistant');
-        }
-    });
-})();
+    })();
 </script>
 </body>
 </html>
