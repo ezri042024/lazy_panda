@@ -349,6 +349,55 @@
                 </div>
             {% endif %}
         </div>
+        <div class="app-card p-4 mb-4">
+            <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1">Recent Card Payments</h5>
+                    <p class="text-muted fw-semibold small mb-0">Credit card and loan payments</p>
+                </div>
+
+                <a href="{% url 'finance_web_transfers' %}" class="text-decoration-none fw-bold text-nowrap"
+                   style="color:#FE7503;">
+                    View transfers
+                </a>
+            </div>
+
+            {% if recent_card_payments %}
+                <div class="vstack gap-3">
+                    {% for transfer in recent_card_payments %}
+                        <div class="dashboard-bill-row d-flex align-items-center gap-3 p-3 rounded-4"
+                             style="background:#F8F7F4;">
+                            <div class="mini-icon mb-0" style="background:rgba(254,117,3,.12);color:#FE7503;">
+                                <i class="bi bi-credit-card"></i>
+                            </div>
+
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold text-truncate">
+                                    {{ transfer.to_account.name }}
+                                </div>
+                                <div class="small fw-bold text-muted text-truncate">
+                                    Paid from {{ transfer.from_account.name }} • {{ transfer.transfer_date }}
+                                </div>
+                            </div>
+
+                            <div class="fw-bold text-nowrap">
+                                ₱{{ transfer.amount|floatformat:2|intcomma }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <div class="brand-icon mx-auto mb-3">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">No card payments yet</h6>
+                    <p class="text-muted fw-semibold mb-0 small">
+                        Transfers to credit cards or loans will appear here.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
 
         <div class="app-card p-4">
             <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">
@@ -434,6 +483,7 @@
                 {% endif %}
             </div>
         </div>
+
 
         <div class="app-card p-4">
             <div class="dashboard-card-title-row d-flex justify-content-between align-items-center mb-3 gap-3">

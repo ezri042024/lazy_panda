@@ -78,6 +78,16 @@ def dashboard_view(request):
         transaction_date__year=year,
     )
 
+    recent_card_payments = Transfer.objects.filter(
+        user=request.user,
+        to_account__account_type__in=["credit_card", "loan"],
+        transfer_date__month=month,
+        transfer_date__year=year,
+    ).select_related(
+        "from_account",
+        "to_account",
+    ).order_by("-transfer_date", "-created_at")[:5]
+
     bills = Bill.objects.filter(user=request.user)
     debts = Debt.objects.filter(user=request.user, is_active=True)
     goals = SavingsGoal.objects.filter(user=request.user, is_completed=False)
@@ -166,6 +176,7 @@ def dashboard_view(request):
         "total_budget_limit": total_budget_limit,
         "total_budget_spent": total_budget_spent,
         "total_budget_remaining": total_budget_remaining,
+        "recent_card_payments": recent_card_payments,
     }
 
     return render(request, "finance_web/dashboard.html", context)
