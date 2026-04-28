@@ -14,7 +14,8 @@ from finance.defaults import create_default_finance_setup
 from finance.models import Account, Transaction, Bill, Debt, SavingsGoal, Budget, Category, RecurringBill, Transfer, \
     DebtPayment, GoalContribution, MoneyLent, MoneyLentPayment
 from finance.services import decrease_account_balance, increase_account_balance, generate_recurring_bills_for_user, \
-    increase_debt_balance, decrease_debt_balance, decrease_goal_amount, increase_goal_amount
+    increase_debt_balance, decrease_debt_balance, decrease_goal_amount, increase_goal_amount, create_money_lent, \
+    add_money_lent_payment
 from finance.views import BillViewSet
 from .ai import generate_report_ai_summary, analyze_receipt_image_with_openai
 
@@ -2706,6 +2707,168 @@ def assistant_account_choices(user):
     ]
 
 
+def find_receivable_by_borrower(user, borrower_name):
+    if not borrower_name:
+        return None
+
+    borrower_name = clean_search_text(borrower_name)
+
+    receivables = MoneyLent.objects.filter(
+        user=user,
+    ).exclude(
+        status="paid"
+    )
+
+    # Exact-ish match first
+    for item in receivables:
+        if borrower_name == clean_search_text(item.borrower_name):
+            return item
+
+    # Partial match fallback
+    for item in receivables:
+        cleaned_name = clean_search_text(item.borrower_name)
+
+        if borrower_name in cleaned_name or cleaned_name in borrower_name:
+            return item
+
+    # Word fallback
+    for item in receivables:
+        cleaned_name = clean_search_text(item.borrower_name)
+
+        for word in borrower_name.split():
+            if len(word) >= 2 and word in cleaned_name:
+                return item
+
+    return None
+
+
+def extract_borrower_for_lent(text, amount):
+    cleaned = remove_amount_from_text(text, amount)
+    cleaned = clean_search_text(cleaned)
+
+    remove_words = [
+        "borrowed",
+        "borrow",
+        "lent",
+        "lend",
+        "loaned",
+        "loan",
+        "to",
+        "from",
+        "me",
+        "i",
+        "gave",
+        "cash",
+        "money",
+    ]
+
+    words = [
+        word for word in cleaned.split()
+        if word not in remove_words
+    ]
+
+    # Remove account names if message contains "from BPI"
+    if " from " in f" {text.lower()} ":
+        before_from = text.lower().split(" from ")[0]
+        cleaned = remove_amount_from_text(before_from, amount)
+        cleaned = clean_search_text(cleaned)
+
+        words = [
+            word for word in cleaned.split()
+            if word not in remove_words
+        ]
+
+    return " ".join(words).strip().title()
+
+
+def extract_borrower_for_payment(text, amount):
+    cleaned = remove_amount_from_text(text, amount)
+    cleaned = clean_search_text(cleaned)
+
+    remove_words = [
+        "paid",
+        "pay",
+        "payment",
+        "returned",
+        "return",
+        "gave",
+        "back",
+        "me",
+        "to",
+        "into",
+        "in",
+        "received",
+        "from",
+    ]
+
+    # For "John paid me 500 to BPI", keep before " to "
+    lowered = text.lower()
+
+    for separator in [" to ", " into ", " in "]:
+        if separator in lowered:
+            lowered = lowered.split(separator)[0]
+            break
+
+    cleaned = remove_amount_from_text(lowered, amount)
+    cleaned = clean_search_text(cleaned)
+
+    words = [
+        word for word in cleaned.split()
+        if word not in remove_words
+    ]
+
+    return " ".join(words).strip().title()
+
+
+def is_money_lent_intent(text):
+    lent_keywords = [
+        "borrowed",
+        "borrow",
+        "lent",
+        "lend",
+        "loaned",
+        "loan",
+    ]
+
+    repayment_keywords = [
+        "paid me",
+        "paid back",
+        "returned",
+        "gave back",
+    ]
+
+    if any(keyword in text for keyword in repayment_keywords):
+        return False
+
+    return any(keyword in text for keyword in lent_keywords)
+
+
+def is_money_lent_payment_intent(text):
+    payment_keywords = [
+        "paid me",
+        "paid back",
+        "returned",
+        "gave back",
+        "pay me back",
+    ]
+
+    return any(keyword in text for keyword in payment_keywords)
+
+
+def is_show_receivables_intent(text):
+    keywords = [
+        "show receivables",
+        "show people who owe me",
+        "who owes me",
+        "who still owes me",
+        "people who owe me",
+        "borrowed money",
+        "money lent",
+    ]
+
+    return any(keyword in text for keyword in keywords)
+
+
 def serialize_preview(preview):
     data = {}
 
@@ -2817,6 +2980,44 @@ def finance_assistant_view(request):
     text = message.lower()
     amount = extract_amount(text)
 
+    # Show receivables intent
+    if is_show_receivables_intent(text) and not amount:
+        records = (
+            MoneyLent.objects
+            .filter(user=request.user)
+            .exclude(status="paid")
+            .order_by("expected_payment_date", "-lent_date", "-created_at")
+        )
+
+        if not records.exists():
+            return JsonResponse({
+                "ok": True,
+                "reply": lazy_reply("Nobody owes you money right now. Suspiciously peaceful."),
+            })
+
+        lines = []
+        total_remaining = Decimal("0.00")
+
+        for item in records:
+            remaining = item.current_balance
+            total_remaining += remaining
+
+            due_text = f" due on {item.expected_payment_date}" if item.expected_payment_date else ""
+            lines.append(
+                f"• {item.borrower_name}: ₱{remaining:,.2f}{due_text}"
+            )
+
+        reply = (
+            "Here are the people who still owe you money:\n\n"
+            + "\n".join(lines)
+            + f"\n\nTotal receivable: ₱{total_remaining:,.2f}."
+        )
+
+        return JsonResponse({
+            "ok": True,
+            "reply": lazy_reply(reply),
+        })
+
     # Pay bill intent
     if "pay" in text and "bill" in text:
         search_text = text.replace("pay", "").replace("bill", "")
@@ -2900,6 +3101,71 @@ def finance_assistant_view(request):
             "reply": lazy_reply(preview["reply"]),
         })
 
+    # Money lent intent
+    # Examples:
+    # "John borrowed 1000 from BPI"
+    # "lend 500 to Mark from Cash Wallet"
+    # "I lent Anna 300"
+    if amount and is_money_lent_intent(text):
+        borrower_name = extract_borrower_for_lent(message, amount)
+        account = extract_account_from_text(request.user, message)
+
+        if not borrower_name:
+            return JsonResponse({
+                "ok": False,
+                "reply": lazy_reply("Who borrowed the money? My lazy brain needs a name first."),
+            })
+
+        if not account:
+            choices = assistant_account_choices(request.user)
+
+            if not choices:
+                return JsonResponse({
+                    "ok": False,
+                    "reply": lazy_reply("Please create an account first."),
+                })
+
+            request.session["finance_assistant_preview"] = {
+                "intent": "money_lent",
+                "borrower_name": borrower_name,
+                "amount": str(amount),
+                "description": "Added via finance assistant",
+                "needs_account": True,
+            }
+
+            return JsonResponse({
+                "ok": True,
+                "needs_choice": True,
+                "choice_type": "account",
+                "choices": choices,
+                "reply": lazy_reply(
+                    f"`{borrower_name}` borrowed ₱{amount:,.2f}. "
+                    f"Which account did the money come from?"
+                ),
+            })
+
+        preview = {
+            "intent": "money_lent",
+            "borrower_name": borrower_name,
+            "amount": amount,
+            "account_id": account.id,
+            "account_name": account.name,
+            "description": "Added via finance assistant",
+            "reply": (
+                f"Add receivable: `{borrower_name}` borrowed "
+                f"₱{amount:,.2f} from {account.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
     if " to " in text and amount:
         from_account, to_account = parse_transfer_command(
             request.user,
@@ -2946,6 +3212,89 @@ def finance_assistant_view(request):
             "reply": (
                 f"Transfer ₱{amount:,.2f} from {from_account.name} "
                 f"to {to_account.name}?"
+            ),
+        }
+
+        request.session["finance_assistant_preview"] = serialize_preview(preview)
+
+        return JsonResponse({
+            "ok": True,
+            "needs_confirmation": True,
+            "preview": serialize_preview(preview),
+            "reply": lazy_reply(preview["reply"]),
+        })
+
+
+    # Money lent payment intent
+    # Examples:
+    # "John paid me 500"
+    # "Anna paid back 300 to Cash Wallet"
+    # "Mark returned 1000 to BPI"
+    if amount and is_money_lent_payment_intent(text):
+        borrower_name = extract_borrower_for_payment(message, amount)
+        receivable = find_receivable_by_borrower(request.user, borrower_name)
+
+        if not borrower_name:
+            return JsonResponse({
+                "ok": False,
+                "reply": lazy_reply("Who paid you back? I am lazy, not psychic."),
+            })
+
+        if not receivable:
+            return JsonResponse({
+                "ok": False,
+                "reply": lazy_reply(f"I couldn't find an unpaid receivable for `{borrower_name}`."),
+            })
+
+        if amount > receivable.current_balance:
+            return JsonResponse({
+                "ok": False,
+                "reply": lazy_reply(
+                    f"`{receivable.borrower_name}` only owes ₱{receivable.current_balance:,.2f}. "
+                    f"Payment of ₱{amount:,.2f} is too much."
+                ),
+            })
+
+        account = extract_destination_account_from_text(request.user, message)
+
+        if not account:
+            choices = assistant_account_choices(request.user)
+
+            if not choices:
+                return JsonResponse({
+                    "ok": False,
+                    "reply": lazy_reply("Please create an account first."),
+                })
+
+            request.session["finance_assistant_preview"] = {
+                "intent": "money_lent_payment",
+                "money_lent_id": receivable.id,
+                "borrower_name": receivable.borrower_name,
+                "amount": str(amount),
+                "needs_account": True,
+            }
+
+            return JsonResponse({
+                "ok": True,
+                "needs_choice": True,
+                "choice_type": "account",
+                "choices": choices,
+                "reply": lazy_reply(
+                    f"`{receivable.borrower_name}` paid ₱{amount:,.2f}. "
+                    f"Which account received the money?"
+                ),
+            })
+
+        preview = {
+            "intent": "money_lent_payment",
+            "money_lent_id": receivable.id,
+            "borrower_name": receivable.borrower_name,
+            "amount": amount,
+            "account_id": account.id,
+            "account_name": account.name,
+            "reply": (
+                f"Record payment from `{receivable.borrower_name}` for "
+                f"₱{amount:,.2f} into {account.name}?"
             ),
         }
 
@@ -3077,7 +3426,11 @@ def finance_assistant_view(request):
 
     return JsonResponse({
         "ok": False,
-        "reply": "I didn't understand that yet. Try `jollibee 500`, `salary 10000`, or `pay meralco bill`.",
+        "reply": (
+            "I didn't understand that yet. Try `jollibee 500`, "
+            "`salary 10000`, `pay meralco bill`, "
+            "`John borrowed 1000`, or `John paid me 500`."
+        ),
     })
 
 
@@ -3227,6 +3580,53 @@ def finance_assistant_confirm_view(request):
                 f"from {from_account.name} to {to_account.name}."
             )
 
+        elif intent == "money_lent":
+            account = Account.objects.get(
+                id=preview["account_id"],
+                user=request.user,
+                is_active=True,
+            )
+
+            money_lent = create_money_lent(
+                user=request.user,
+                borrower_name=preview["borrower_name"],
+                amount=Decimal(preview["amount"]),
+                account=account,
+                description=preview.get("description") or "Added via finance assistant",
+            )
+
+            reply = lazy_reply(
+                f"Done. `{money_lent.borrower_name}` now owes you "
+                f"₱{money_lent.current_balance:,.2f}. I deducted it from {account.name}."
+            )
+
+        elif intent == "money_lent_payment":
+            receivable = MoneyLent.objects.get(
+                id=preview["money_lent_id"],
+                user=request.user,
+            )
+
+            account = Account.objects.get(
+                id=preview["account_id"],
+                user=request.user,
+                is_active=True,
+            )
+
+            payment = add_money_lent_payment(
+                money_lent=receivable,
+                amount=Decimal(preview["amount"]),
+                account=account,
+                notes="Added via finance assistant",
+            )
+
+            receivable.refresh_from_db()
+
+            reply = lazy_reply(
+                f"Payment recorded. `{receivable.borrower_name}` paid "
+                f"₱{payment.amount:,.2f}. Remaining balance: "
+                f"₱{receivable.current_balance:,.2f}."
+            )
+
         else:
             return JsonResponse({
                 "ok": False,
@@ -3320,6 +3720,24 @@ def finance_assistant_choose_view(request):
         preview["reply"] = (
             f"Pay bill `{bill.name}` for ₱{Decimal(preview['amount']):,.2f} "
             f"from {account.name}?"
+        )
+
+    elif intent == "money_lent":
+        preview["account_id"] = account.id
+        preview["account_name"] = account.name
+        preview["needs_account"] = False
+        preview["reply"] = (
+            f"Add receivable: `{preview['borrower_name']}` borrowed "
+            f"₱{Decimal(preview['amount']):,.2f} from {account.name}?"
+        )
+
+    elif intent == "money_lent_payment":
+        preview["account_id"] = account.id
+        preview["account_name"] = account.name
+        preview["needs_account"] = False
+        preview["reply"] = (
+            f"Record payment from `{preview['borrower_name']}` for "
+            f"₱{Decimal(preview['amount']):,.2f} into {account.name}?"
         )
 
     else:

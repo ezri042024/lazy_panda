@@ -1,10 +1,13 @@
 import calendar
 from datetime import date
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 
-from .models import Account, Debt, SavingsGoal, Bill, RecurringBill
+from .models import Account, Debt, SavingsGoal, Bill, RecurringBill, MoneyLentPayment, MoneyLent
 
 LIABILITY_ACCOUNT_TYPES = ["credit_card", "loan"]
 
@@ -132,3 +135,76 @@ def generate_recurring_bills_for_user(user, year, month):
             skipped_count += 1
 
     return created_bills, skipped_count
+
+
+def _increase_account(account, amount):
+    account.current_balance = (account.current_balance or Decimal("0.00")) + amount
+    account.save(update_fields=["current_balance"])
+
+
+def _decrease_account(account, amount):
+    account.current_balance = (account.current_balance or Decimal("0.00")) - amount
+    account.save(update_fields=["current_balance"])
+
+
+@transaction.atomic
+def create_money_lent(*, user, borrower_name, amount, account, description=""):
+    amount = Decimal(str(amount))
+
+    if amount <= 0:
+        raise ValidationError("Amount must be greater than zero.")
+
+    money_lent = MoneyLent.objects.create(
+        user=user,
+        borrower_name=borrower_name,
+        account=account,
+        original_amount=amount,
+        current_balance=amount,
+        lent_date=timezone.localdate(),
+        notes=description or "Added via finance assistant",
+        status="active",
+    )
+
+    if account:
+        _decrease_account(account, amount)
+
+    return money_lent
+
+
+@transaction.atomic
+def add_money_lent_payment(*, money_lent, amount, account, notes=""):
+    amount = Decimal(str(amount))
+
+    if amount <= 0:
+        raise ValidationError("Payment amount must be greater than zero.")
+
+    if amount > money_lent.current_balance:
+        raise ValidationError(
+            f"Payment cannot exceed remaining balance of ₱{money_lent.current_balance}."
+        )
+
+    payment = MoneyLentPayment.objects.create(
+        user=money_lent.user,
+        money_lent=money_lent,
+        account=account,
+        amount=amount,
+        payment_date=timezone.localdate(),
+        notes=notes or "Added via finance assistant",
+    )
+
+    if account:
+        _increase_account(account, amount)
+
+    money_lent.current_balance -= amount
+
+    if money_lent.current_balance <= 0:
+        money_lent.current_balance = Decimal("0.00")
+        money_lent.status = "paid"
+    elif money_lent.current_balance < money_lent.original_amount:
+        money_lent.status = "partial"
+    else:
+        money_lent.status = "active"
+
+    money_lent.save(update_fields=["current_balance", "status"])
+
+    return payment
